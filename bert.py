@@ -3,19 +3,18 @@ import torch
 import torch.nn as nn
 from torch.utils.data import RandomSampler, SequentialSampler, DataLoader
 import numpy as np
-import pandas as pd
+# import pandas as pd
 import os
 import logging
 from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score
 
 stats_columns = '{0:>5}|{1:>5}|{2:>5}|{3:>5}|{4:>5}|{5:>5}|{6:>5}|{7:>5}|{8:>5}|{9:>5}|{10:>5}'
 
-
-
-
-
-
-
+#
+#
+#
+#
+#
 
 
 def run(model, train_data, dev_data, optimizer, args):
@@ -25,30 +24,28 @@ def run(model, train_data, dev_data, optimizer, args):
 
     torch.cuda.empty_cache()
 
-    logging.info(
-        "Number of training samples {train}, number of dev samples {dev}".format(
-            train=len(train_data),
-            dev=len(dev_data)))
+    logging.info('Number of training samples {train}, number of dev samples {dev}'.format(
+                 train=len(train_data), dev=len(dev_data)))
 
     train(train_iter, dev_iter, model, optimizer, args)
 
-
-
-
-
+#
+#
+#
+#
+#
 
 
 def train(train_iter, dev_iter, model, optimizer, args):
     best_dev_f1 = -1
 
     n_total_steps = len(train_iter)
-    total_iter = len(train_iter)*args.epochs
+    total_iter = len(train_iter) * args.epochs
 
     logging.info(
         stats_columns.format(
-            'Epoch', 'T-Acc', 'T-F1', 'T-Recall', 'T-Prec', 'T-Loss'
-            , 'D-Acc', 'D-F1', 'D-Recall', 'D-Prec', 'D-Loss'))
-
+            'Epoch', 'T-Acc', 'T-F1', 'T-Recall', 'T-Prec', 'T-Loss',
+            'D-Acc', 'D-F1', 'D-Recall', 'D-Prec', 'D-Loss'))
 
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_iter)
 
@@ -70,7 +67,7 @@ def train(train_iter, dev_iter, model, optimizer, args):
             model.zero_grad()
 
             # forward pass
-            loss, logits =  model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
+            loss, logits = model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
 
             # record preds, trues
             _pred = logits.cpu().data.numpy()
@@ -90,22 +87,26 @@ def train(train_iter, dev_iter, model, optimizer, args):
 
         train_acc, train_f1, train_recall, train_prec = calculate_metrics(trues, preds)
 
-
         _dev_label, _dev_pred, dev_loss = eval(dev_iter, model, args)
 
         dev_acc, dev_f1, dev_recall, dev_prec = calculate_metrics(_dev_label, _dev_pred)
 
         logging.info(
-            stats_columns.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss, dev_acc, dev_f1,
-                                 dev_recall, dev_prec, dev_loss))
+            stats_columns.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
+                                 dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
 
         if best_dev_f1 < dev_f1:
-            logging.debug('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(dev_acc=dev_f1,
-                                                                                                    best_dev_acc=best_dev_f1))
+            logging.debug('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
+                          dev_acc=dev_f1, best_dev_acc=best_dev_f1))
             best_dev_f1 = dev_f1
             model_name = 'epoch_{epoch}_dev_f1_{dev_f1:03}.pth.tar'.format(epoch=epoch, dev_f1=dev_f1)
-            save_model(model, optimizer, epoch, model_name, training_mode, args.checkpoint_dir)
+            save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
 
+#
+#
+#
+#
+#
 
 
 def eval(dev_iter, model, args):
@@ -122,7 +123,7 @@ def eval(dev_iter, model, args):
 
         # forward pass
         with torch.no_grad():
-            loss, logits =  model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
+            loss, logits = model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
         dev_loss += loss.item()
 
         # record preds, trues
@@ -134,8 +135,11 @@ def eval(dev_iter, model, args):
     dev_loss = dev_loss / n_total_steps
     return trues, preds, dev_loss
 
-
-
+#
+#
+#
+#
+#
 
 
 def calculate_metrics(label, pred):
@@ -151,11 +155,14 @@ def calculate_metrics(label, pred):
 
     return acc, f1, recall, prec
 
+#
+#
+#
+#
+#
 
 
-
-
-def save_model(model, optimizer, epoch, model_name, training_mode, checkpoint_dir):
+def save_model(model, optimizer, epoch, model_name, checkpoint_dir):
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
@@ -163,17 +170,19 @@ def save_model(model, optimizer, epoch, model_name, training_mode, checkpoint_di
 
     torch.save({
         'epoch': epoch,
-        'training_mode': training_mode,
         'state_dict': model.state_dict(),
         'optimizer': optimizer.state_dict()
     }, save_path)
 
-    logging.info('Best model in {training_mode} is saved to {save_path}'.format(training_mode=training_mode,
-                                                                                save_path=save_path))
+    logging.info('Best model is saved to {save_path}'.format(save_path=save_path))
+
     return save_path
 
-
-
+#
+#
+#
+#
+#
 
 
 def load_model(checkpoint_path, model, optimizer=None):
@@ -181,6 +190,5 @@ def load_model(checkpoint_path, model, optimizer=None):
     model.load_state_dict(checkpoint['state_dict'])
     if optimizer is not None and 'optimizer' in checkpoint:
         optimizer.load_state_dict(checkpoint['optimizer'])
-    logging.info('Loaded checkpoint from path "{}" (at epoch {}) in training mode {}'
-                 .format(checkpoint_path, checkpoint['epoch']), checkpoint['training_mode'])
-
+    logging.info('Loaded checkpoint from path "{}" (at epoch {}) in training mode {}'.format(
+                 checkpoint_path, checkpoint['epoch']), checkpoint['training_mode'])
