@@ -15,17 +15,17 @@ import logging
 #
 
 
-def read_files(args, method='combined', prepare=False):
+def read_files(args):
 
     # prepare train dev and test files, if set
-    if prepare:
+    if args.prepare:
         path = args.raw_path
         df_raw = pd.read_csv(path, delimiter=',')
         # q = df_raw.question_text.values
         # a = df_raw.answer_text.values
         # label = df_raw.popularity.values
 
-        if method == 'combined':
+        if args.concatenate:
             df_raw['text'] = df_raw['question_text'] + df_raw['answer_text']
         else:
             df_raw['text'] = df_raw['answer_text']

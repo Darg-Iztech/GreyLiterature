@@ -38,13 +38,14 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=8, type=int)
     parser.add_argument('--epochs', default=5, type=int)
     parser.add_argument('--lr', default=1e-5, type=float)
-    parser.add_argument('--device', default='cpu', type=str)  # use 'cuda' if available
+    parser.add_argument('--device', default='cpu', type=str, help="Use cuda if available")
     parser.add_argument('--checkpoint_dir', default='./models', type=str)
     parser.add_argument('--MAX_LEN', default=512, type=int)
     parser.add_argument('--raw_path', default=default_raw_path, type=str)
     parser.add_argument('--data_dir', default=default_data_dir, type=str)
     parser.add_argument('--experiment', default=False, type=str2bool)
     parser.add_argument('--prepare', default=False, type=str2bool)
+    parser.add_argument('--concatenate', default=True, type=str2bool, help="Concatenates Q and A")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this verion in jupyter notebooks to avoid conflicts
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     init_random_seeds(args.seed)
 
     logging.info('Reading datasets...')
-    train_data, dev_data, test_data = read_files(args, method='combined', prepare=args.prepare)
+    train_data, dev_data, test_data = read_files(args)
 
     logging.info('Starting executions...')
     model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2,
