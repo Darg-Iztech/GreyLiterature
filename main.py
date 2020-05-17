@@ -20,9 +20,6 @@ logger = logging.getLogger('main.py')
 logger.root.setLevel(logging.DEBUG)
 coloredlogs.install(level='DEBUG', logger=logger)
 
-# Keep the CSV files under 'raw' directory
-default_raw_path = os.path.join(os.path.realpath(''), 'raw/design_patterns.csv')
-default_data_dir = os.path.join(os.path.realpath(''), 'data/design_patterns')
 default_random_seed = 42
 
 
@@ -41,14 +38,19 @@ if __name__ == '__main__':
     parser.add_argument('--device', default='cpu', type=str, help="Use cuda if available")
     parser.add_argument('--checkpoint_dir', default='./models', type=str)
     parser.add_argument('--MAX_LEN', default=512, type=int)
-    parser.add_argument('--raw_path', default=default_raw_path, type=str)
-    parser.add_argument('--data_dir', default=default_data_dir, type=str)
-    parser.add_argument('--experiment', default=False, type=str2bool)
+
+    parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool)
+    parser.add_argument('--experiment', default=False, type=str2bool)
     parser.add_argument('--concatenate', default=True, type=str2bool, help="Concatenates Q and A")
+    parser.add_argument('--raw_path', default=None, type=str, help="Required if --prepared=True")
+    parser.add_argument('--num_labels', default=None, type=int, required=True, help="Number of classes in dataset")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this verion in jupyter notebooks to avoid conflicts
+
+    if args.prepare and (args.raw_path is None):
+        parser.error("--prepare requires --raw_path")
 
     init_random_seeds(args.seed)
 
@@ -56,7 +58,7 @@ if __name__ == '__main__':
     train_data, dev_data, test_data = read_files(args)
 
     logging.info('Starting executions...')
-    model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2,
+    model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=args.num_labels,
                                                           output_attentions=False, output_hidden_states=False)
     model.cpu()
     optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)

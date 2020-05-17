@@ -1,23 +1,51 @@
+
 # GreyLiterature
 
 Grey literature content quality/user reputation measurement with BERT.
 
-**To run in experiment mode:** 
+## Running Instructions:
 
-```python main.py --experiment=True```
+> ``--data_dir`` and ``--num_labels`` are always required.
 
-> It runs for ``train + dev + test = 1000`` samples in the experiment mode.
+> If ``--prepare=True`` then ``--raw_path`` is also required.
 
-**To run for a different CSV file (raw):**
+### To run for a prepared data set:
 
-```python main.py --prepare=True --raw_path="<path_to_csv_file>" --data_dir="<path_to_store_prepared_files>"```
+Set ``--data_dir`` and ``num_labels``
+
+**Example:**
+
+```bash
+python main.py --data_dir='./data/design_patterns' --num_labels=12
+```
+
+> ``data_dir/`` must include ``train.tsv``, ``dev.tsv``, and ``test.tsv``.
+
+
+### To prepare and run for a raw CSV file:
+
+Set ``--prepare=True`` and ``--raw_path`` in addition to ``--data_dir`` and ``num_labels``. The prepared data sets will be stored in ``--data_dir``.
+
+**Example:**
+
+```bash
+python main.py --data_dir='./data/design_patterns' --num_labels=12 --prepare=True --raw_path='./raw/design_patterns.csv'
+```
 
 > Raw CSV files are not divided into training, development, and test sets.
 
-**To run for a different data set (prepared):**
+### To run in experiment mode:
 
-```python main.py --data_dir="<path_to_data_directory>"```
+Set ``--experiment=True`` in addition to ``--data_dir`` and ``num_labels``.
 
-> ``data_dir/`` must include ``train.tsv``, ``dev.tsv``, and ``test.tsv``.
+**Example:**
+ 
+```bash
+python main.py --data_dir='./data/design_patterns' --num_labels=12 --experiment=True
+```
+
+> It runs for ``train + dev + test = 1000`` samples in the experiment mode.
+
+## References
 
 Modified version of the code in [https://github.com/isspek/west\_iyte\_plausability\_news\_detection](https://github.com/isspek/west_iyte_plausability_news_detection)
