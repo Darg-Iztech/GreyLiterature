@@ -17,16 +17,14 @@ import logging
 
 def read_files(args):
 
+    QA_SEP_TOKEN = '<QA_SEP>'
     # prepare train dev and test files, if set
     if args.prepare:
         path = args.raw_path
         df_raw = pd.read_csv(path, delimiter=',')
-        # q = df_raw.question_text.values
-        # a = df_raw.answer_text.values
-        # label = df_raw.popularity.values
 
         if args.concatenate:
-            df_raw['text'] = df_raw['question_text'] + df_raw['answer_text']
+            df_raw['text'] = df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
         else:
             df_raw['text'] = df_raw['answer_text']
 
@@ -67,17 +65,20 @@ def read_files(args):
     test_att_mask = []
 
     for article in train_articles:
-        encoded_article = tokenizer.encode_plus(article, add_special_tokens=True, max_length=args.MAX_LEN,
+        q, a = article.split(QA_SEP_TOKEN)
+        encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
                                                 pad_to_max_length=True, return_attention_mask=True, return_tensors='pt')
         train_ids.append(encoded_article['input_ids'])
         train_att_mask.append(encoded_article['attention_mask'])
     for article in dev_articles:
-        encoded_article = tokenizer.encode_plus(article, add_special_tokens=True, max_length=args.MAX_LEN,
+        q, a = article.split(QA_SEP_TOKEN)
+        encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
                                                 pad_to_max_length=True, return_attention_mask=True, return_tensors='pt')
         dev_ids.append(encoded_article['input_ids'])
         dev_att_mask.append(encoded_article['attention_mask'])
     for article in test_articles:
-        encoded_article = tokenizer.encode_plus(article, add_special_tokens=True, max_length=args.MAX_LEN,
+        q, a = article.split(QA_SEP_TOKEN)
+        encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
                                                 pad_to_max_length=True, return_attention_mask=True, return_tensors='pt')
         test_ids.append(encoded_article['input_ids'])
         test_att_mask.append(encoded_article['attention_mask'])
