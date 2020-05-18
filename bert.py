@@ -96,8 +96,8 @@ def train(train_iter, dev_iter, model, optimizer, args):
                                  dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
 
         if best_dev_f1 < dev_f1:
-            logging.debug('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
-                          dev_acc=dev_f1, best_dev_acc=best_dev_f1))
+            logging.info('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
+                         dev_acc=dev_f1, best_dev_acc=best_dev_f1))
             best_dev_f1 = dev_f1
             model_name = 'epoch_{epoch}_dev_f1_{dev_f1:03}.pth.tar'.format(epoch=epoch, dev_f1=dev_f1)
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
@@ -146,8 +146,8 @@ def calculate_metrics(label, pred):
     pred_class = np.concatenate([np.argmax(numarray, axis=1) for numarray in pred]).ravel()
     label_class = np.concatenate([numarray for numarray in label]).ravel()
 
-    logging.debug('Expected: \n{}'.format(label_class[:20]))
-    logging.debug('Predicted: \n{}'.format(pred_class[:20]))
+    logging.info('Expected: \n{}'.format(label_class[:20]))
+    logging.info('Predicted: \n{}'.format(pred_class[:20]))
     acc = accuracy_score(label_class, pred_class)
     f1 = f1_score(label_class, pred_class, average='binary')
     recall = recall_score(label_class, pred_class)

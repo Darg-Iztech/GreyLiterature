@@ -54,7 +54,6 @@ if __name__ == '__main__':
 
     init_random_seeds(args.seed)
 
-    logging.info('Reading datasets...')
     train_data, dev_data, test_data = read_files(args)
 
     logging.info('Starting executions...')
