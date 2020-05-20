@@ -42,7 +42,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool)
     parser.add_argument('--experiment', default=False, type=str2bool)
-    parser.add_argument('--concatenate', default=True, type=str2bool, help="Concatenates Q and A")
+    parser.add_argument('--concatenate', default="TA", type=str, help="Concatenates title, Q and A (options: QA, A, TQA, TA)")
     parser.add_argument('--raw_path', default=None, type=str, help="Required if --prepared=True")
     parser.add_argument('--num_labels', default=None, type=int, required=True, help="Number of classes in dataset")
 
@@ -56,12 +56,6 @@ if __name__ == '__main__':
 
     train_data, dev_data, test_data = read_files(args)
 
-    logging.info('Starting executions...')
-    model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=args.num_labels,
-                                                          output_attentions=False, output_hidden_states=False)
-    model.cpu()
-    optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
-
     # run for a small subset, if set
     if args.experiment:
         logging.info('Running in experiment mode! Subsetting the datasets...')
@@ -69,6 +63,14 @@ if __name__ == '__main__':
         dev_data = Subset(dev_data, range(0, 160))
         test_data = Subset(test_data, range(0, 200))
 
-    run(model, train_data, dev_data, optimizer, args)
+
+
+    logging.info('Starting executions...')
+    model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=args.num_labels,
+                                                          output_attentions=False, output_hidden_states=False)
+    model.cpu()
+    optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
+
+    run(model, train_data, dev_data, test_data, optimizer, args)
 
     # todo evaluate with test data

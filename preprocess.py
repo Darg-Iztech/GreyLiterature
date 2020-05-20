@@ -25,13 +25,19 @@ def read_files(args):
         path = args.raw_path
         df_raw = pd.read_csv(path, delimiter=',')
 
-        if args.concatenate:
+        if args.concatenate == "QA":
             df_raw['text'] = df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
-        else:
+        elif args.concatenate == "A":
             df_raw['text'] = df_raw['answer_text']
+        elif args.concatenate == "TQA":
+            df_raw['text'] = df_raw['question_title'] + QA_SEP_TOKEN + df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
+        elif args.concatenate == "TA":
+            df_raw['text'] = df_raw['question_title'] + QA_SEP_TOKEN + df_raw['answer_text']
 
         df_raw['label'] = df_raw['popularity']
         data = df_raw.filter(['text', 'label'])
+
+        #TO DO HERE: add user by user splits instead of the one below
 
         train, test = train_test_split(data, test_size=0.2, random_state=args.seed)
         train, dev = train_test_split(train, test_size=0.2, random_state=args.seed)

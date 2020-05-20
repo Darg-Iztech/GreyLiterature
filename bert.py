@@ -17,18 +17,24 @@ stats_columns = '{0:>5}|{1:>5}|{2:>5}|{3:>5}|{4:>5}|{5:>5}|{6:>5}|{7:>5}|{8:>5}|
 #
 
 
-def run(model, train_data, dev_data, optimizer, args):
+def run(model, train_data, dev_data, test_data, optimizer, args):
 
     train_iter = DataLoader(train_data, sampler=RandomSampler(train_data), batch_size=args.batch_size)
     dev_iter = DataLoader(dev_data, sampler=SequentialSampler(dev_data), batch_size=args.batch_size)
+    test_iter = DataLoader(test_data, sampler=SequentialSampler(test_data), batch_size=args.batch_size)
 
     torch.cuda.empty_cache()
 
-    logging.info('Number of training samples {train}, number of dev samples {dev}'.format(
-                 train=len(train_data), dev=len(dev_data)))
+    logging.info('Number of training samples {train}, number of dev samples {dev}, number of test samples {test}'.format(
+                 train=len(train_data), dev=len(dev_data), test=len(test_data)))
 
     train(train_iter, dev_iter, model, optimizer, args)
 
+    _test_label, _test_pred, test_loss = test(test_iter, model, args)
+
+    test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred)
+
+    logging.info("TEST RESULTS:\nAccuracy:" +str(test_acc)+ "\nF1:" +str(test_f1)+ "\nRecall:" +str(test_recall)+ "\nPrecision:" + str(test_prec))
 #
 #
 #
@@ -62,7 +68,6 @@ def train(train_iter, dev_iter, model, optimizer, args):
             input_ids = batch_ids[0].to(args.device)
             att_masks = batch_ids[1].to(args.device)
             labels = batch_ids[2].to(args.device)
-            labels.to(args.device)
 
             model.zero_grad()
 
@@ -119,7 +124,6 @@ def eval(dev_iter, model, args):
         input_ids = batch_ids[0].to(args.device)
         att_masks = batch_ids[1].to(args.device)
         labels = batch_ids[2].to(args.device)
-        labels.to(args.device)
 
         # forward pass
         with torch.no_grad():
@@ -134,6 +138,39 @@ def eval(dev_iter, model, args):
 
     dev_loss = dev_loss / n_total_steps
     return trues, preds, dev_loss
+
+
+#
+#
+#
+#
+#
+
+def test(test_iter, model, args):
+    n_total_steps = len(test_iter)
+    model.eval()
+    test_loss = 0
+    preds = []
+    trues = []
+    for batch_ids in test_iter:
+        input_ids = batch_ids[0].to(args.device)
+        att_masks = batch_ids[1].to(args.device)
+        labels = batch_ids[2].to(args.device)
+
+        # forward pass
+        with torch.no_grad():
+            loss, logits = model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
+        test_loss += loss.item()
+
+        # record preds, trues
+        _pred = logits.cpu().data.numpy()
+        preds.append(_pred)
+        _label = labels.cpu().data.numpy()
+        trues.append(_label)
+
+    test_loss = test_loss / n_total_steps
+    return trues, preds, test_loss
+
 
 #
 #
@@ -190,5 +227,5 @@ def load_model(checkpoint_path, model, optimizer=None):
     model.load_state_dict(checkpoint['state_dict'])
     if optimizer is not None and 'optimizer' in checkpoint:
         optimizer.load_state_dict(checkpoint['optimizer'])
-    logging.info('Loaded checkpoint from path "{}" (at epoch {}) in training mode {}'.format(
-                 checkpoint_path, checkpoint['epoch']), checkpoint['training_mode'])
+    logging.info('Loaded checkpoint from path "{}" (at epoch {})'.format(
+                 checkpoint_path, checkpoint['epoch']))
