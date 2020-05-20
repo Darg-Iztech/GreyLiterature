@@ -11,7 +11,7 @@ import os
 # from transformers import BertConfig
 from transformers import BertForSequenceClassification, AdamW
 
-from preprocess import read_files
+from preprocess import read_files, prepare_data
 from bert import run
 
 # Setup colorful logging
@@ -42,9 +42,9 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool)
     parser.add_argument('--experiment', default=False, type=str2bool)
-    parser.add_argument('--concatenate', default="TA", type=str, help="Concatenates title, Q and A (options: QA, A, TQA, TA)")
+    parser.add_argument('--mode', default="TA", type=str, help="Concatenates title, Q and A (options: QA, A, TQA, TA)")
     parser.add_argument('--raw_path', default=None, type=str, help="Required if --prepared=True")
-    parser.add_argument('--num_labels', default=None, type=int, required=True, help="Number of classes in dataset")
+    parser.add_argument('--num_labels', default=12, type=int, required=True, help="Number of classes in dataset")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this verion in jupyter notebooks to avoid conflicts
@@ -54,6 +54,8 @@ if __name__ == '__main__':
 
     init_random_seeds(args.seed)
 
+    if args.prepare:
+        prepare_data(args)
     train_data, dev_data, test_data = read_files(args)
 
     # run for a small subset, if set

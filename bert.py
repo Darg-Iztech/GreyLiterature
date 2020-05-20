@@ -32,8 +32,8 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 
     _test_label, _test_pred, test_loss = test(test_iter, model, args)
 
+    #TO DO check if the metrics hold for the multi-class classification
     test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred)
-
     logging.info("TEST RESULTS:\nAccuracy:" +str(test_acc)+ "\nF1:" +str(test_f1)+ "\nRecall:" +str(test_recall)+ "\nPrecision:" + str(test_prec))
 #
 #
