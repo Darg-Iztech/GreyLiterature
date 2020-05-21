@@ -4,7 +4,7 @@ import coloredlogs
 import torch
 from str2bool import str2bool
 from torch.utils.data import Subset
-import os
+# import os
 # import numpy as np
 # from torch import nn
 # from torch import optim
@@ -42,20 +42,25 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool)
     parser.add_argument('--experiment', default=False, type=str2bool)
-    parser.add_argument('--mode', default="TA", type=str, help="Concatenates title, Q and A (options: QA, A, TQA, TA)")
-    parser.add_argument('--raw_path', default=None, type=str, help="Required if --prepared=True")
+    parser.add_argument('--mode', default='TA', type=str,
+                        help="Concatenates title, question and answer (Options: TA, QA, TQA, A = None)")
+    # parser.add_argument('--raw_path', default=None, type=str, help="Path to CSV file to be prepared")
     parser.add_argument('--num_labels', default=12, type=int, required=True, help="Number of classes in dataset")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this verion in jupyter notebooks to avoid conflicts
 
-    if args.prepare and (args.raw_path is None):
-        parser.error("--prepare requires --raw_path")
-
     init_random_seeds(args.seed)
+
+    # if args.prepare:
+    #     if args.raw_path is None:
+    #         parser.error("--prepare requires --raw_path")
+    #     else:
+    #         prepare_data(args)
 
     if args.prepare:
         prepare_data(args)
+
     train_data, dev_data, test_data = read_files(args)
 
     # run for a small subset, if set
@@ -65,8 +70,6 @@ if __name__ == '__main__':
         dev_data = Subset(dev_data, range(0, 160))
         test_data = Subset(test_data, range(0, 200))
 
-
-
     logging.info('Starting executions...')
     model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=args.num_labels,
                                                           output_attentions=False, output_hidden_states=False)
@@ -74,5 +77,3 @@ if __name__ == '__main__':
     optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
 
     run(model, train_data, dev_data, test_data, optimizer, args)
-
-    # todo evaluate with test data

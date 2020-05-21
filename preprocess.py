@@ -8,10 +8,11 @@ import pandas as pd
 import os
 import logging
 
-
-
-
-
+#
+#
+#
+#
+#
 
 
 def save_data(args, path, train_set, dev_set, test_set):
@@ -20,14 +21,13 @@ def save_data(args, path, train_set, dev_set, test_set):
     data.to_csv(os.path.join(path, 'train.tsv'), sep='\t', index=False)
 
     data = dev_set.filter(['text', 'label'])
-    data.to_csv(os.path.join(path, 'dev.tsv'), sep='\t', index=False) 
-       
+    data.to_csv(os.path.join(path, 'dev.tsv'), sep='\t', index=False)
+
     data = test_set.filter(['text', 'label'])
     data.to_csv(os.path.join(path, 'test.tsv'), sep='\t', index=False)
 
-    logging.info("Saved " +str(len(train_set))+ " training, " +str(len(dev_set))+ " dev, " +str(len(test_set))+ " test examples\nTo: " +str(path))
-
-
+    logging.info("Saved {train} training, {dev} dev, {test} test samples to {path}".format(
+                 train=len(train_set), dev=len(dev_set), test=len(test_set), path=str(path)))
 
 #
 #
@@ -35,101 +35,95 @@ def save_data(args, path, train_set, dev_set, test_set):
 #
 #
 
-def prepare_data(args):
-    QA_SEP_TOKEN = '<QA_SEP>'
 
-    logging.info("Preparing train/dev/test sets...")
-    path = args.raw_path
-    df_raw = pd.read_csv(path, delimiter=',')
+def divide_users(args, df_raw):
 
+    # Divide users into train, dev and test sets
+    logging.info("Dividing users into train, dev and test sets...")
 
-    #divide the users into train dev and test
-    users = {}
     train_users = []
     dev_users = []
     test_users = []
+
     for i in range(args.num_labels):
-        class_data = df_raw[df_raw['popularity']==i]
+        class_data = df_raw[df_raw['popularity'] == i]
         user_list = class_data['user_id'].unique()
         tr, t = train_test_split(user_list, test_size=0.2, random_state=args.seed)
         tr, d = train_test_split(tr, test_size=0.2, random_state=args.seed)
         train_users.extend(tr)
-        dev_users.extend(d)         
+        dev_users.extend(d)
         test_users.extend(t)
-    #class_data = df_raw[(df_raw['popularity']==10) | (df_raw['popularity']==11)]
-    #user_list = class_data['user_id'].unique()
-    #tr, t = train_test_split(user_list, test_size=0.2, random_state=args.seed)
-    #tr, d = train_test_split(tr, test_size=0.2, random_state=args.seed)
-    #train_users.extend(tr)
-    #dev_users.extend(d)         
-    #test_users.extend(t)
 
-
-    #write the selected users to a file
-    with open(os.path.join(args.data_dir, "train_users.txt"),"w") as user_file:
+    # Write train, dev and test users to files
+    with open(os.path.join(args.data_dir, "train_users.txt"), "w") as user_file:
         for user in train_users:
             user_file.write(str(user) + "\n")
-    with open(os.path.join(args.data_dir, "dev_users.txt"),"w") as user_file:
+    with open(os.path.join(args.data_dir, "dev_users.txt"), "w") as user_file:
         for user in dev_users:
             user_file.write(str(user) + "\n")
-    with open(os.path.join(args.data_dir, "test_users.txt"),"w") as user_file:
+    with open(os.path.join(args.data_dir, "test_users.txt"), "w") as user_file:
         for user in test_users:
             user_file.write(str(user) + "\n")
 
+    return train_users, dev_users, test_users
 
-    #divide examples into train dev and test according to the user
+#
+#
+#
+#
+#
+
+
+def prepare_data(args):
+    QA_SEP_TOKEN = '<QA_SEP>'
+
+    logging.info("Preparing train, dev and test sets...")
+    # df_raw = pd.read_csv(args.raw_path, delimiter=',')
+    df_raw = pd.read_csv(os.path.join(args.data_dir, "raw.csv"))
+
+    # Concatenate T/Q/A according to --mode argument
+    if args.mode == "TA":
+        df_raw['text'] = df_raw['question_title'] + QA_SEP_TOKEN + df_raw['answer_text']
+    elif args.mode == "QA":
+        df_raw['text'] = df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
+    elif args.mode == "TQA":
+        df_raw['text'] = df_raw['question_title'] + QA_SEP_TOKEN + \
+            df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
+    elif args.mode is None or args.mode == "A":
+        df_raw['text'] = df_raw['answer_text']
+
+    df_raw['label'] = df_raw['popularity']
+
+    # Get train, dev and test users
+    train_users, dev_users, test_users = divide_users(args, df_raw)
+
+    # Divide examples into train, dev and test sets according to users
     train = df_raw[df_raw['user_id'].isin(train_users)]
     dev = df_raw[df_raw['user_id'].isin(dev_users)]
     test = df_raw[df_raw['user_id'].isin(test_users)]
 
-
-    #construct the datasets
-    #for TA
-    train_TA = train.copy()
-    dev_TA = dev.copy()
-    test_TA = test.copy()
-    path = os.path.join(args.data_dir, "TA")
-
-    train_TA['text'] = train_TA['question_title'] + QA_SEP_TOKEN + train_TA['answer_text']
-    train_TA['label'] = train_TA['popularity']
-    dev_TA['text'] = dev_TA['question_title'] + QA_SEP_TOKEN + dev_TA['answer_text']
-    dev_TA['label'] = dev_TA['popularity']
-    test_TA['text'] = test_TA['question_title'] + QA_SEP_TOKEN + test_TA['answer_text']
-    test_TA['label'] = test_TA['popularity']
-
-    save_data(args, path, train_TA, dev_TA, test_TA)
-
-    #for TQA
-    train_TQA = train.copy()
-    dev_TQA = dev.copy()
-    test_TQA = test.copy()
-    path = os.path.join(args.data_dir, "TQA")
-
-    train_TQA['text'] = train_TQA['question_title'] + QA_SEP_TOKEN + train_TQA['question_text'] + QA_SEP_TOKEN + train_TQA['answer_text']
-    train_TQA['label'] = train_TQA['popularity']
-    dev_TQA['text'] = dev_TQA['question_title'] + QA_SEP_TOKEN + dev_TQA['question_text'] + QA_SEP_TOKEN + dev_TQA['answer_text']
-    dev_TQA['label'] = dev_TQA['popularity']
-    test_TQA['text'] = test_TQA['question_title'] + QA_SEP_TOKEN + test_TQA['question_text'] + QA_SEP_TOKEN + test_TQA['answer_text']
-    test_TQA['label'] = test_TQA['popularity']
-
-    save_data(args, path, train_TQA, dev_TQA, test_TQA)
-
+    out_dir = os.path.join(args.data_dir, args.mode)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    save_data(args, out_dir, train, dev, test)
 
 #
 #
 #
 #
 #
+
 
 def read_files(args):
     QA_SEP_TOKEN = '<QA_SEP>'
 
-
     # start reading
-    logging.info("Reading train/dev/test sets...")
-    train_path = os.path.join(args.data_dir, 'train.tsv')
-    dev_path = os.path.join(args.data_dir, 'dev.tsv')
-    test_path = os.path.join(args.data_dir, 'test.tsv')
+    read_dir = os.path.join(args.data_dir, args.mode)
+    logging.info("Reading train, dev and test sets from {}".format(read_dir))
+    train_path = os.path.join(read_dir, 'train.tsv')
+    dev_path = os.path.join(read_dir, 'dev.tsv')
+    test_path = os.path.join(read_dir, 'test.tsv')
+
     df_train = pd.read_csv(train_path, delimiter='\t')
     df_dev = pd.read_csv(dev_path, delimiter='\t')
     df_test = pd.read_csv(test_path, delimiter='\t')
@@ -152,31 +146,34 @@ def read_files(args):
     test_ids = []
     test_att_mask = []
 
-    logging.info("Tokenizing train set...")
+    logging.info("Tokenizing train set which has {} answers...".format(len(train_articles)))
     for article in train_articles:
         q, a = article.split(QA_SEP_TOKEN)
         encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
-                                                pad_to_max_length=True, return_attention_mask=True, return_tensors='pt')
+                                                pad_to_max_length=True, return_attention_mask=True,
+                                                return_tensors='pt')
         train_ids.append(encoded_article['input_ids'])
         train_att_mask.append(encoded_article['attention_mask'])
 
-    logging.info("Tokenizing dev set...")
+    logging.info("Tokenizing dev set which has {} answers...".format(len(dev_articles)))
     for article in dev_articles:
         q, a = article.split(QA_SEP_TOKEN)
         encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
-                                                pad_to_max_length=True, return_attention_mask=True, return_tensors='pt')
+                                                pad_to_max_length=True, return_attention_mask=True,
+                                                return_tensors='pt')
         dev_ids.append(encoded_article['input_ids'])
         dev_att_mask.append(encoded_article['attention_mask'])
 
-    logging.info("Tokenizing test set...")
+    logging.info("Tokenizing test set which has {} answers...".format(len(test_articles)))
     for article in test_articles:
         q, a = article.split(QA_SEP_TOKEN)
         encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
-                                                pad_to_max_length=True, return_attention_mask=True, return_tensors='pt')
+                                                pad_to_max_length=True, return_attention_mask=True,
+                                                return_tensors='pt')
         test_ids.append(encoded_article['input_ids'])
         test_att_mask.append(encoded_article['attention_mask'])
 
-    logging.info("Converting train/dev/test sets to torch tensors...")
+    logging.info("Converting train, dev and test sets to torch tensors...")
     train_ids = torch.cat(train_ids, dim=0)
     dev_ids = torch.cat(dev_ids, dim=0)
     test_ids = torch.cat(test_ids, dim=0)
