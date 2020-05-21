@@ -8,7 +8,9 @@ import os
 import logging
 from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score
 
-stats_columns = '{0:>5}|{1:>5}|{2:>5}|{3:>5}|{4:>5}|{5:>5}|{6:>5}|{7:>5}|{8:>5}|{9:>5}|{10:>5}'
+stats_head = '{0:>5}|{1:>7}|{2:>7}|{3:>7}|{4:>7}|{5:>7}|{6:>7}|{7:>7}|{8:>7}|{9:>7}|{10:>7}'
+stats_values = '{0:>5}|{1:>6.5f}|{2:>6.5f}|{3:>6.5f}|{4:>6.5f}|{5:>6.5f}|{6:>6.5f}|' + \
+               '{7:>6.5f}|{8:>6.5f}|{9:>6.5f}|{10:>6.5f}'
 
 #
 #
@@ -49,12 +51,10 @@ def train(train_iter, dev_iter, model, optimizer, args):
     n_total_steps = len(train_iter)
     total_iter = len(train_iter) * args.epochs
 
-    logging.info(
-        stats_columns.format(
-            'Epoch', 'T-Acc', 'T-F1', 'T-Recall', 'T-Prec', 'T-Loss',
-            'D-Acc', 'D-F1', 'D-Recall', 'D-Prec', 'D-Loss'))
-
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_iter)
+
+    logging.info(stats_head.format('Epoch', 'T-Acc', 'T-F1', 'T-Rec', 'T-Prec', 'T-Loss',
+                                   'D-Acc', 'D-F1', 'D-Rec', 'D-Prec', 'D-Loss'))
 
     for epoch in range(args.epochs):
 
@@ -98,8 +98,8 @@ def train(train_iter, dev_iter, model, optimizer, args):
         dev_acc, dev_f1, dev_recall, dev_prec = calculate_metrics(_dev_label, _dev_pred)
 
         logging.info(
-            stats_columns.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
-                                 dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
+            stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
+                                dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
 
         if best_dev_f1 < dev_f1:
             logging.info('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
@@ -184,12 +184,12 @@ def calculate_metrics(label, pred):
     pred_class = np.concatenate([np.argmax(numarray, axis=1) for numarray in pred]).ravel()
     label_class = np.concatenate([numarray for numarray in label]).ravel()
 
-    logging.info('Expected: \n{}'.format(label_class[:20]))
-    logging.info('Predicted: \n{}'.format(pred_class[:20]))
+    logging.info('Expected:  {}'.format(label_class[:20]))
+    logging.info('Predicted: {}'.format(pred_class[:20]))
     acc = accuracy_score(label_class, pred_class)
-    f1 = f1_score(label_class, pred_class, average='binary')
-    recall = recall_score(label_class, pred_class)
-    prec = precision_score(label_class, pred_class)
+    f1 = f1_score(label_class, pred_class, average='weighted')
+    recall = recall_score(label_class, pred_class, average='weighted')
+    prec = precision_score(label_class, pred_class, average='weighted')
 
     return acc, f1, recall, prec
 

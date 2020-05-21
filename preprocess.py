@@ -8,6 +8,8 @@ import pandas as pd
 import os
 import logging
 
+QA_SEP_TOKEN = '<QA_SEP>'
+
 #
 #
 #
@@ -75,7 +77,6 @@ def divide_users(args, df_raw):
 
 
 def prepare_data(args):
-    QA_SEP_TOKEN = '<QA_SEP>'
 
     logging.info("Preparing train, dev and test sets...")
     # df_raw = pd.read_csv(args.raw_path, delimiter=',')
@@ -87,9 +88,8 @@ def prepare_data(args):
     elif args.mode == "QA":
         df_raw['text'] = df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
     elif args.mode == "TQA":
-        df_raw['text'] = df_raw['question_title'] + QA_SEP_TOKEN + \
-            df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
-    elif args.mode is None or args.mode == "A":
+        df_raw['text'] = df_raw['question_title'] + " " + df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
+    elif args.mode == "A":
         df_raw['text'] = df_raw['answer_text']
 
     df_raw['label'] = df_raw['popularity']
@@ -115,7 +115,6 @@ def prepare_data(args):
 
 
 def read_files(args):
-    QA_SEP_TOKEN = '<QA_SEP>'
 
     # start reading
     read_dir = os.path.join(args.data_dir, args.mode)
@@ -128,6 +127,46 @@ def read_files(args):
     df_dev = pd.read_csv(dev_path, delimiter='\t')
     df_test = pd.read_csv(test_path, delimiter='\t')
 
+    return df_train, df_dev, df_test
+
+#
+#
+#
+#
+#
+
+
+def tokenize_helper(args, articles, tokenizer):
+
+    ids = []
+    att_mask = []
+    if args.mode == 'A':
+        for article in articles:
+            encoded_article = tokenizer.encode_plus(article, add_special_tokens=True, max_length=args.MAX_LEN,
+                                                    pad_to_max_length=True, return_attention_mask=True,
+                                                    return_tensors='pt')
+            ids.append(encoded_article['input_ids'])
+            att_mask.append(encoded_article['attention_mask'])
+    else:
+        for article in articles:
+            q, a = article.split(QA_SEP_TOKEN)
+            encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
+                                                    pad_to_max_length=True, return_attention_mask=True,
+                                                    return_tensors='pt')
+            ids.append(encoded_article['input_ids'])
+            att_mask.append(encoded_article['attention_mask'])
+
+    return ids, att_mask
+
+#
+#
+#
+#
+#
+
+
+def tokenize_data(args, df_train, df_dev, df_test):
+
     train_articles = df_train.text.values
     train_labels = df_train.label.values
     dev_articles = df_dev.text.values
@@ -137,41 +176,14 @@ def read_files(args):
 
     # tokenize the text with bert ids
     logging.info("Loading BERT tokenizer...")
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True, max_length=args.MAX_LEN)
-
-    train_ids = []
-    train_att_mask = []
-    dev_ids = []
-    dev_att_mask = []
-    test_ids = []
-    test_att_mask = []
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
 
     logging.info("Tokenizing train set which has {} answers...".format(len(train_articles)))
-    for article in train_articles:
-        q, a = article.split(QA_SEP_TOKEN)
-        encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
-                                                pad_to_max_length=True, return_attention_mask=True,
-                                                return_tensors='pt')
-        train_ids.append(encoded_article['input_ids'])
-        train_att_mask.append(encoded_article['attention_mask'])
-
+    train_ids, train_att_mask = tokenize_helper(args, train_articles, tokenizer)
     logging.info("Tokenizing dev set which has {} answers...".format(len(dev_articles)))
-    for article in dev_articles:
-        q, a = article.split(QA_SEP_TOKEN)
-        encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
-                                                pad_to_max_length=True, return_attention_mask=True,
-                                                return_tensors='pt')
-        dev_ids.append(encoded_article['input_ids'])
-        dev_att_mask.append(encoded_article['attention_mask'])
-
+    dev_ids, dev_att_mask = tokenize_helper(args, dev_articles, tokenizer)
     logging.info("Tokenizing test set which has {} answers...".format(len(test_articles)))
-    for article in test_articles:
-        q, a = article.split(QA_SEP_TOKEN)
-        encoded_article = tokenizer.encode_plus(q, a, add_special_tokens=True, max_length=args.MAX_LEN,
-                                                pad_to_max_length=True, return_attention_mask=True,
-                                                return_tensors='pt')
-        test_ids.append(encoded_article['input_ids'])
-        test_att_mask.append(encoded_article['attention_mask'])
+    test_ids, test_att_mask = tokenize_helper(args, test_articles, tokenizer)
 
     logging.info("Converting train, dev and test sets to torch tensors...")
     train_ids = torch.cat(train_ids, dim=0)

@@ -11,7 +11,7 @@ from torch.utils.data import Subset
 # from transformers import BertConfig
 from transformers import BertForSequenceClassification, AdamW
 
-from preprocess import read_files, prepare_data
+from preprocess import read_files, prepare_data, tokenize_data
 from bert import run
 
 # Setup colorful logging
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--prepare', default=False, type=str2bool)
     parser.add_argument('--experiment', default=False, type=str2bool)
     parser.add_argument('--mode', default='TA', type=str,
-                        help="Concatenates title, question and answer (Options: TA, QA, TQA, A = None)")
+                        help="Concatenates title, question and answer (Options: A, TA, QA, TQA)")
     # parser.add_argument('--raw_path', default=None, type=str, help="Path to CSV file to be prepared")
     parser.add_argument('--num_labels', default=12, type=int, required=True, help="Number of classes in dataset")
 
@@ -61,14 +61,16 @@ if __name__ == '__main__':
     if args.prepare:
         prepare_data(args)
 
-    train_data, dev_data, test_data = read_files(args)
+    df_train, df_dev, df_test = read_files(args)
 
     # run for a small subset, if set
     if args.experiment:
         logging.info('Running in experiment mode! Subsetting the datasets...')
-        train_data = Subset(train_data, range(0, 640))
-        dev_data = Subset(dev_data, range(0, 160))
-        test_data = Subset(test_data, range(0, 200))
+        df_train = df_train.head(640)
+        df_dev = df_dev.head(160)
+        df_test = df_test.head(200)
+
+    train_data, dev_data, test_data = tokenize_data(args, df_train, df_dev, df_test)
 
     logging.info('Starting executions...')
     model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=args.num_labels,
