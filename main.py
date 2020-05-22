@@ -10,7 +10,7 @@ from str2bool import str2bool
 # from transformers import BertConfig
 from transformers import AutoConfig, AutoModelForSequenceClassification, AdamW
 
-from preprocess import read_files, prepare_data, tokenize_data
+from preprocess import read_files, prepare_data, tokenize_data, print2logfile
 from bert import run
 
 # Setup colorful logging
@@ -79,7 +79,17 @@ if __name__ == '__main__':
         config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=args.num_labels)
         model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config)
 
-    model.cpu()
+    if torch.cuda.is_available():
+        args.device = torch.device('cuda')
+        model.cuda()
+    else:
+        args.device = torch.device('cpu')
+        model.cpu()
+
     optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
 
     run(model, train_data, dev_data, test_data, optimizer, args)
+
+
+
+

@@ -6,7 +6,8 @@ import numpy as np
 # import pandas as pd
 import os
 import logging
-from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score
+from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, classification_report
+from preprocess import print2logfile
 
 stats_head = '{0:>5}|{1:>7}|{2:>7}|{3:>7}|{4:>7}|{5:>7}|{6:>7}|{7:>7}|{8:>7}|{9:>7}|{10:>7}'
 stats_values = '{0:>5}|{1:>6.5f}|{2:>6.5f}|{3:>6.5f}|{4:>6.5f}|{5:>6.5f}|{6:>6.5f}|' + \
@@ -30,14 +31,10 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
     logging.info("Number of training samples {train}, number of dev samples {dev}, number of test samples {test}"
                  .format(train=len(train_data), dev=len(dev_data), test=len(test_data)))
 
-    train(train_iter, dev_iter, model, optimizer, args)
+    print2logfile("\n\n################################\nTRAINING STARTED WITH PARAMS: lr=" + str(args.lr), args)
+    train(train_iter, dev_iter, test_iter, model, optimizer, args)
 
-    _test_label, _test_pred, test_loss = test(test_iter, model, args)
 
-    # TO DO check if the metrics hold for the multi-class classification
-    test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred)
-    logging.info("TEST RESULTS:\nAccuracy: {acc}\nF1: {F1}\nRecall: {recall}\nPrecision: {prec}".format(
-                 acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec))
 #
 #
 #
@@ -45,7 +42,7 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 #
 
 
-def train(train_iter, dev_iter, model, optimizer, args):
+def train(train_iter, dev_iter, test_iter, model, optimizer, args):
     best_dev_f1 = -1
 
     n_total_steps = len(train_iter)
@@ -56,8 +53,10 @@ def train(train_iter, dev_iter, model, optimizer, args):
     logging.info(stats_head.format('Epoch', 'T-Acc', 'T-F1', 'T-Rec', 'T-Prec', 'T-Loss',
                                    'D-Acc', 'D-F1', 'D-Rec', 'D-Prec', 'D-Loss'))
 
+
     for epoch in range(args.epochs):
 
+        print2logfile("-------------------------epoch "+ str(epoch) +"-------------------------",args)
         model.train()
 
         train_loss = 0
@@ -91,22 +90,43 @@ def train(train_iter, dev_iter, model, optimizer, args):
 
         train_loss = train_loss / n_total_steps
 
-        train_acc, train_f1, train_recall, train_prec = calculate_metrics(trues, preds)
+        print2logfile("--Training--", args)
+        train_acc, train_f1, train_recall, train_prec = calculate_metrics(trues, preds, args)
 
         _dev_label, _dev_pred, dev_loss = eval(dev_iter, model, args)
 
-        dev_acc, dev_f1, dev_recall, dev_prec = calculate_metrics(_dev_label, _dev_pred)
+        print2logfile("--Validation--", args)
+        dev_acc, dev_f1, dev_recall, dev_prec = calculate_metrics(_dev_label, _dev_pred, args)
 
         logging.info(
             stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
                                 dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
 
+        print2logfile(stats_head.format('Epoch', 'T-Acc', 'T-F1', 'T-Rec', 'T-Prec', 'T-Loss',
+                                   'D-Acc', 'D-F1', 'D-Rec', 'D-Prec', 'D-Loss'), args)
+        print2logfile(stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
+                                dev_acc, dev_f1, dev_recall, dev_prec, dev_loss), args)
+
         if best_dev_f1 < dev_f1:
             logging.info('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
                          dev_acc=dev_f1, best_dev_acc=best_dev_f1))
+            print2logfile('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
+                         dev_acc=dev_f1, best_dev_acc=best_dev_f1), args)
+
             best_dev_f1 = dev_f1
             model_name = 'epoch_{epoch}_dev_f1_{dev_f1:03}.pth.tar'.format(epoch=epoch, dev_f1=dev_f1)
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
+
+
+        _test_label, _test_pred, test_loss = test(test_iter, model, args)
+
+        print2logfile("\n--Test--", args)
+        test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred, args)
+        logging.info("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
+                 acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec))
+        print2logfile("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
+                 acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec), args)
+
 
 #
 #
@@ -180,12 +200,16 @@ def test(test_iter, model, args):
 #
 
 
-def calculate_metrics(label, pred):
+def calculate_metrics(label, pred, args):
     pred_class = np.concatenate([np.argmax(numarray, axis=1) for numarray in pred]).ravel()
     label_class = np.concatenate([numarray for numarray in label]).ravel()
 
     logging.info('Expected:  {}'.format(label_class[:20]))
     logging.info('Predicted: {}'.format(pred_class[:20]))
+    logging.info(classification_report(label_class, pred_class))
+    print2logfile('Expected:  {}'.format(label_class[:20]), args)
+    print2logfile('Predicted: {}'.format(pred_class[:20]), args)
+    print2logfile(classification_report(label_class, pred_class), args)
     acc = accuracy_score(label_class, pred_class)
     f1 = f1_score(label_class, pred_class, average='weighted')
     recall = recall_score(label_class, pred_class, average='weighted')

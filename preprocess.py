@@ -206,3 +206,16 @@ def tokenize_data(args, df_train, df_dev, df_test):
     test_dataset = TensorDataset(test_ids, test_att_mask, test_labels)
 
     return train_dataset, dev_dataset, test_dataset
+
+
+
+
+
+def print2logfile(string, args):
+    filename = args.model + "_logs.txt"
+    log_path = os.path.join(args.checkpoint_dir, filename)
+    with open(log_path, "a") as logfile:
+        logfile.write(string + "\n")
+
+
+
