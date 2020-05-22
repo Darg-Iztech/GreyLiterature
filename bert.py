@@ -73,7 +73,7 @@ def train(train_iter, dev_iter, model, optimizer, args):
             model.zero_grad()
 
             # forward pass
-            loss, logits = model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
+            loss, logits = model(input_ids, attention_mask=att_masks, labels=labels)
 
             # record preds, trues
             _pred = logits.cpu().data.numpy()
@@ -128,7 +128,7 @@ def eval(dev_iter, model, args):
 
         # forward pass
         with torch.no_grad():
-            loss, logits = model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
+            loss, logits = model(input_ids, attention_mask=att_masks, labels=labels)
         dev_loss += loss.item()
 
         # record preds, trues
@@ -160,7 +160,7 @@ def test(test_iter, model, args):
 
         # forward pass
         with torch.no_grad():
-            loss, logits = model(input_ids, token_type_ids=None, attention_mask=att_masks, labels=labels)
+            loss, logits = model(input_ids, attention_mask=att_masks, labels=labels)
         test_loss += loss.item()
 
         # record preds, trues

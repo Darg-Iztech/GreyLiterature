@@ -1,4 +1,4 @@
-from transformers import BertTokenizer
+from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 import torch
 # import torch.nn as nn
@@ -174,9 +174,14 @@ def tokenize_data(args, df_train, df_dev, df_test):
     test_articles = df_test.text.values
     test_labels = df_test.label.values
 
-    # tokenize the text with bert ids
-    logging.info("Loading BERT tokenizer...")
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+    if args.model == 'bert':
+        # tokenize the text with BERT ids
+        logging.info("Loading BERT tokenizer...")
+        tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    elif args.model == 'distilbert':
+        # tokenize the text with DistilBERT ids
+        logging.info("Loading DistilBERT tokenizer...")
+        tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
 
     logging.info("Tokenizing train set which has {} answers...".format(len(train_articles)))
     train_ids, train_att_mask = tokenize_helper(args, train_articles, tokenizer)
