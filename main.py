@@ -4,7 +4,7 @@ import coloredlogs
 import torch
 from str2bool import str2bool
 # import os
-# import numpy as np
+import numpy as np
 # from torch import nn
 # from torch import optim
 # from transformers import BertConfig
@@ -41,25 +41,22 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool, help="(options [True, False] defaults to False)")
     parser.add_argument('--experiment', default=False, type=str2bool, help="(options [True, False] defaults to False)")
-    parser.add_argument('--mode', default='TA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TA')")
-    # parser.add_argument('--raw_path', default=None, type=str, help="Path to CSV file to be prepared")
-    parser.add_argument('--num_labels', default=12, type=int, required=True, help="Number of classes in dataset")
+    parser.add_argument('--mode', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TA')")
+    parser.add_argument('--num_labels', default=None, type=int, help="Number of classes in dataset")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this verion in jupyter notebooks to avoid conflicts
 
     init_random_seeds(args.seed)
 
-    # if args.prepare:
-    #     if args.raw_path is None:
-    #         parser.error("--prepare requires --raw_path")
-    #     else:
-    #         prepare_data(args)
-
     if args.prepare:
         prepare_data(args)
 
     df_train, df_dev, df_test = read_files(args)
+
+    # automatically identify the number of labels:
+    args.num_labels = len(np.union1d(np.union1d(df_train['label'], df_dev['label']), df_test['label']))
+    logging.info('Identified {} labels in the dataset.'.format(args.num_labels))
 
     # run for a small subset, if set
     if args.experiment:
@@ -89,7 +86,3 @@ if __name__ == '__main__':
     optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
 
     run(model, train_data, dev_data, test_data, optimizer, args)
-
-
-
-

@@ -5,6 +5,7 @@ import torch
 # from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 import pandas as pd
+import numpy as np
 import os
 import logging
 
@@ -81,6 +82,15 @@ def prepare_data(args):
     logging.info("Preparing train, dev and test sets...")
     # df_raw = pd.read_csv(args.raw_path, delimiter=',')
     df_raw = pd.read_csv(os.path.join(args.data_dir, "raw.csv"))
+
+    initial_len = len(df_raw)
+    df_raw = df_raw[df_raw['popularity'] > -1]
+    latter_len = len(df_raw)
+    args.num_labels = len(np.unique(df_raw['popularity']))
+
+    logging.info("{} out of {} answers are removed. {} remained.".format(
+        initial_len-latter_len, initial_len, latter_len
+    ))
 
     # Concatenate T/Q/A according to --mode argument
     if args.mode == "TA":
@@ -207,8 +217,11 @@ def tokenize_data(args, df_train, df_dev, df_test):
 
     return train_dataset, dev_dataset, test_dataset
 
-
-
+#
+#
+#
+#
+#
 
 
 def print2logfile(string, args):
@@ -216,6 +229,3 @@ def print2logfile(string, args):
     log_path = os.path.join(args.checkpoint_dir, filename)
     with open(log_path, "a") as logfile:
         logfile.write(string + "\n")
-
-
-
