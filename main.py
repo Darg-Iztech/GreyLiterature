@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool, help="(options [True, False] defaults to False)")
     parser.add_argument('--experiment', default=False, type=str2bool, help="(options [True, False] defaults to False)")
-    parser.add_argument('--mode', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TA')")
+    parser.add_argument('--mode', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TQA')")
     parser.add_argument('--num_labels', default=None, type=int, help="Number of classes in dataset")
 
     args = parser.parse_args()
@@ -76,10 +76,12 @@ if __name__ == '__main__':
         config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=args.num_labels)
         model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config)
 
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and args.device == 'cuda':
+        logging.info('Running on GPU !!!')
         args.device = torch.device('cuda')
         model.cuda()
     else:
+        logging.info('Running on CPU !!!')
         args.device = torch.device('cpu')
         model.cpu()
 

@@ -25,10 +25,10 @@ Set ``--data_dir`` and ``--prepare=True``.
 **Example:**
 
 ```bash
-python main.py --data_dir='./data/design_patterns' --prepare=True
+python main.py --data_dir='./data/dp' --prepare=True
 ```
 
-In this example, ``./data/design_patterns/raw.csv`` file will be divided into train, dev and test sets, and stored separately under ``./data/design_patterns/TQA`` (since the default mode is ``'TQA'``).
+In this example, ``./data/dp/raw.csv`` file will be divided into train, dev and test sets, and stored separately under ``./data/dp/TQA`` (since the default mode is ``'TQA'``).
 
 ### :arrow_forward: To run for a prepared data set:
 
@@ -37,7 +37,7 @@ Set only the ``--data_dir``. Also set ``--mode`` if needed.
 **Example:**
 
 ```bash
-python main.py --mode='TA' --data_dir='./data/design_patterns'
+python main.py --mode='TA' --data_dir='./data/dp'
 ```
 
 In this example, ``data_dir/TA`` must include ``train.tsv``, ``dev.tsv``, and ``test.tsv``.
@@ -47,7 +47,7 @@ In this example, ``data_dir/TA`` must include ``train.tsv``, ``dev.tsv``, and ``
 Set ``--model='distilbert'`` in addition to ``--data_dir``.
 
 ```bash
-python main.py --model='distilbert' --data_dir='./data/design_patterns'
+python main.py --model='distilbert' --data_dir='./data/dp'
 ```
 
 ### :arrow_forward: To run in experiment mode:
@@ -57,7 +57,7 @@ Set ``--experiment=True`` in addition to ``--data_dir``.
 **Example:**
  
 ```bash
-python main.py --data_dir='./data/design_patterns' --experiment=True
+python main.py --data_dir='./data/dp' --experiment=True
 ```
 
 In this example, the executions will be performed for ``train + dev + test = 1000`` samples.

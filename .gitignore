@@ -3,3 +3,4 @@ models/
 __pycache__/
 venv_GreyLit/
 .vscode
+*.tsv
