@@ -2,6 +2,10 @@
 
 Grey literature answer quality / user reputation measurement with BERT and DistilBERT.
 
+## Downloading the datasets stored in Git LFS:
+
+> :warning: To retrieve ``raw.csv`` files with ``git clone`` or ``git pull`` make sure Git LFS is pre-installed in your environment.
+
 ## Running Instructions:
 
 > :warning: ``--data_dir`` is always required.
@@ -11,6 +15,8 @@ Grey literature answer quality / user reputation measurement with BERT and Disti
 > :warning: Runs in ``'TQA'`` mode by default. Use ``--mode`` to change concatenation mode.
 
 > :warning: Runs using ``'bert'`` model by default. Use ``--model`` to change language model.
+
+> :warning: Runs on ``'cpu'`` by default. Use ``--device`` to change device.
 
 ### :arrow_forward: To prepare and run for a raw CSV file:
 
@@ -25,19 +31,19 @@ Set ``--data_dir`` and ``--prepare=True``.
 **Example:**
 
 ```bash
-python main.py --data_dir='./data/dp' --prepare=True
+python3 main.py --data_dir='data/dp' --prepare=True
 ```
 
-In this example, ``./data/dp/raw.csv`` file will be divided into train, dev and test sets, and stored separately under ``./data/dp/TQA`` (since the default mode is ``'TQA'``).
+In this example, ``data/dp/raw.csv`` file will be divided into train, dev and test sets, and stored separately under ``data/dp/TQA`` (since the default mode is ``'TQA'``).
 
 ### :arrow_forward: To run for a prepared data set:
 
-Set only the ``--data_dir``. Also set ``--mode`` if needed.
+If you already divided the dataset into train, dev, and test sets, then set only the ``--data_dir``. In the example below, we also set ``--mode``, which is optional.
 
 **Example:**
 
 ```bash
-python main.py --mode='TA' --data_dir='./data/dp'
+python3 main.py --mode='TA' --data_dir='./data/dp'
 ```
 
 In this example, ``data_dir/TA`` must include ``train.tsv``, ``dev.tsv``, and ``test.tsv``.
@@ -47,7 +53,7 @@ In this example, ``data_dir/TA`` must include ``train.tsv``, ``dev.tsv``, and ``
 Set ``--model='distilbert'`` in addition to ``--data_dir``.
 
 ```bash
-python main.py --model='distilbert' --data_dir='./data/dp'
+python3 main.py --model='distilbert' --data_dir='./data/dp'
 ```
 
 ### :arrow_forward: To run in experiment mode:
@@ -57,7 +63,7 @@ Set ``--experiment=True`` in addition to ``--data_dir``.
 **Example:**
  
 ```bash
-python main.py --data_dir='./data/dp' --experiment=True
+python3 main.py --data_dir='./data/dp' --experiment=True
 ```
 
 In this example, the executions will be performed for ``train + dev + test = 1000`` samples.

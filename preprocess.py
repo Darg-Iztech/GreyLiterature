@@ -225,7 +225,8 @@ def tokenize_data(args, df_train, df_dev, df_test):
 
 
 def print2logfile(string, args):
-    filename = args.model + "_logs.txt"
+    dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
+    filename = '{}_{}_{}.log'.format(args.model, dataset_name, args.exec_time)  # ex: bert_dp_20200609_164520_logs.txt
     log_path = os.path.join(args.checkpoint_dir, filename)
     with open(log_path, "a") as logfile:
         logfile.write(string + "\n")

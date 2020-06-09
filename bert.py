@@ -31,7 +31,7 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
     logging.info("Number of training samples {train}, number of dev samples {dev}, number of test samples {test}"
                  .format(train=len(train_data), dev=len(dev_data), test=len(test_data)))
 
-    print2logfile("\n\n################################\nTRAINING STARTED WITH PARAMS: lr=" + str(args.lr), args)
+    print2logfile("### {} ### TRAINING STARTED WITH PARAMS: lr={} ### \n\n".format(args.exec_time, args.lr), args)
     train(train_iter, dev_iter, test_iter, model, optimizer, args)
 
 
@@ -114,7 +114,9 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
                          dev_acc=dev_f1, best_dev_acc=best_dev_f1), args)
 
             best_dev_f1 = dev_f1
-            model_name = 'epoch_{epoch}_dev_f1_{dev_f1:03}.pth.tar'.format(epoch=epoch, dev_f1=dev_f1)
+            dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
+            model_name = '{}_{}_{}_epoch_{}_dev_f1_{:.6f}.pth.tar'.format(args.model, dataset_name, args.exec_time, epoch, dev_f1)
+            # example model name: bert_dp_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
 
 
