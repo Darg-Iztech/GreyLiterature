@@ -42,12 +42,12 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default=None, required=True, type=str)
     parser.add_argument('--prepare', default=False, type=str2bool, help="(options [True, False] defaults to False)")
     parser.add_argument('--experiment', default=False, type=str2bool, help="(options [True, False] defaults to False)")
-    parser.add_argument('--mode', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TQA')")
+    parser.add_argument('--sequence', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TQA')")
     parser.add_argument('--num_labels', default=None, type=int, help="Number of classes in dataset")
     parser.add_argument('--exec_time', default=None, type=str)
 
     args = parser.parse_args()
-    # args, unknown = parser.parse_known_args()  # use this verion in jupyter notebooks to avoid conflicts
+    # args, unknown = parser.parse_known_args()  # use this version in jupyter notebooks to avoid conflicts
 
     init_random_seeds(args.seed)
     args.exec_time = time.strftime("%Y%m%d_%H%M%S")

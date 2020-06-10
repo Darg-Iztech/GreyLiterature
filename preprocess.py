@@ -92,14 +92,14 @@ def prepare_data(args):
         initial_len-latter_len, initial_len, latter_len
     ))
 
-    # Concatenate T/Q/A according to --mode argument
-    if args.mode == "TA":
+    # Concatenate T/Q/A according to --sequence argument
+    if args.sequence == "TA":
         df_raw['text'] = df_raw['question_title'] + QA_SEP_TOKEN + df_raw['answer_text']
-    elif args.mode == "QA":
+    elif args.sequence == "QA":
         df_raw['text'] = df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
-    elif args.mode == "TQA":
+    elif args.sequence == "TQA":
         df_raw['text'] = df_raw['question_title'] + " " + df_raw['question_text'] + QA_SEP_TOKEN + df_raw['answer_text']
-    elif args.mode == "A":
+    elif args.sequence == "A":
         df_raw['text'] = df_raw['answer_text']
 
     df_raw['label'] = df_raw['popularity']
@@ -112,7 +112,7 @@ def prepare_data(args):
     dev = df_raw[df_raw['user_id'].isin(dev_users)]
     test = df_raw[df_raw['user_id'].isin(test_users)]
 
-    out_dir = os.path.join(args.data_dir, args.mode)
+    out_dir = os.path.join(args.data_dir, args.sequence)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     save_data(args, out_dir, train, dev, test)
@@ -127,7 +127,7 @@ def prepare_data(args):
 def read_files(args):
 
     # start reading
-    read_dir = os.path.join(args.data_dir, args.mode)
+    read_dir = os.path.join(args.data_dir, args.sequence)
     logging.info("Reading train, dev and test sets from {}".format(read_dir))
     train_path = os.path.join(read_dir, 'train.tsv')
     dev_path = os.path.join(read_dir, 'dev.tsv')
@@ -150,7 +150,7 @@ def tokenize_helper(args, articles, tokenizer):
 
     ids = []
     att_mask = []
-    if args.mode == 'A':
+    if args.sequence == 'A':
         for article in articles:
             encoded_article = tokenizer.encode_plus(article, add_special_tokens=True, max_length=args.MAX_LEN,
                                                     pad_to_max_length=True, return_attention_mask=True,
@@ -226,7 +226,10 @@ def tokenize_data(args, df_train, df_dev, df_test):
 
 def print2logfile(string, args):
     dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
-    filename = '{}_{}_{}.log'.format(args.model, dataset_name, args.exec_time)  # ex: bert_dp_20200609_164520_logs.txt
+
+    filename = '{}_{}_{}_{}.log'.format(args.model, dataset_name, args.sequence, args.exec_time)
+    # example filename: bert_dp_TQA_20200609_164520.log
+
     log_path = os.path.join(args.checkpoint_dir, filename)
     with open(log_path, "a") as logfile:
         logfile.write(string + "\n")

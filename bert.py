@@ -31,7 +31,11 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
     logging.info("Number of training samples {train}, number of dev samples {dev}, number of test samples {test}"
                  .format(train=len(train_data), dev=len(dev_data), test=len(test_data)))
 
-    print2logfile("### {} ### TRAINING STARTED WITH PARAMS: lr={} ### \n\n".format(args.exec_time, args.lr), args)
+    run_params = ""
+    for param in vars(args):
+        run_params += param + '=' + str(getattr(args, param)) + '\n'
+
+    print2logfile("### TRAINING STARTED WITH PARAMS:\n{}".format(run_params), args)
     train(train_iter, dev_iter, test_iter, model, optimizer, args)
 
 
@@ -44,6 +48,7 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 
 def train(train_iter, dev_iter, test_iter, model, optimizer, args):
     best_dev_f1 = -1
+    prev_best_model_name = ""  # to delete when there is a new best
 
     n_total_steps = len(train_iter)
     total_iter = len(train_iter) * args.epochs
@@ -56,7 +61,7 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
 
     for epoch in range(args.epochs):
 
-        print2logfile("-------------------------epoch "+ str(epoch) +"-------------------------",args)
+        print2logfile("\n\n\n\n-------------------------epoch "+ str(epoch) +"-------------------------",args)
         model.train()
 
         train_loss = 0
@@ -114,11 +119,17 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
                          dev_acc=dev_f1, best_dev_acc=best_dev_f1), args)
 
             best_dev_f1 = dev_f1
-            dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
-            model_name = '{}_{}_{}_epoch_{}_dev_f1_{:.6f}.pth.tar'.format(args.model, dataset_name, args.exec_time, epoch, dev_f1)
-            # example model name: bert_dp_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
+
+            dataset = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
+            model_name = '{}_{}_{}_{}_epoch_{}_dev_f1_{:.6f}.pth.tar'.format(args.model, dataset, args.sequence,
+                                                                             args.exec_time, epoch, dev_f1)
+            # example model name: bert_dp_TQA_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
+
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
 
+            if prev_best_model_name != "":
+                delete_prev_best_model(prev_best_model_name, args.checkpoint_dir)
+            prev_best_model_name = model_name  # this model will be deleted in the next time
 
         _test_label, _test_pred, test_loss = test(test_iter, model, args)
 
@@ -256,3 +267,15 @@ def load_model(checkpoint_path, model, optimizer=None):
         optimizer.load_state_dict(checkpoint['optimizer'])
     logging.info('Loaded checkpoint from path "{}" (at epoch {})'.format(
                  checkpoint_path, checkpoint['epoch']))
+
+#
+#
+#
+#
+#
+
+def delete_prev_best_model(prev_best_model_name, checkpoint_dir):
+    prev_best_model_path = os.path.join(checkpoint_dir, prev_best_model_name)
+    if os.path.exists(prev_best_model_path):
+        os.remove(prev_best_model_path)
+        logging.info('Previous best model {} is deleted.'.format(prev_best_model_name))
