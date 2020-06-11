@@ -227,7 +227,7 @@ def tokenize_data(args, df_train, df_dev, df_test):
 def print2logfile(string, args):
     dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
 
-    filename = '{}_{}_{}_{}.log'.format(args.model, dataset_name, args.sequence, args.exec_time)
+    filename = '{}_{}_{}_{}.log'.format(args.model, dataset_name, args.sequence, args.t_start)
     # example filename: bert_dp_TQA_20200609_164520.log
 
     log_path = os.path.join(args.checkpoint_dir, filename)

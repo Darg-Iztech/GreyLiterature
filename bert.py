@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import RandomSampler, SequentialSampler, DataLoader
 import numpy as np
-# import pandas as pd
+import datetime as dt
 import os
 import logging
 from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, classification_report
@@ -31,13 +31,20 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
     logging.info("Number of training samples {train}, number of dev samples {dev}, number of test samples {test}"
                  .format(train=len(train_data), dev=len(dev_data), test=len(test_data)))
 
-    run_params = ""
-    for param in vars(args):
-        run_params += param + '=' + str(getattr(args, param)) + '\n'
+    t_start = dt.datetime.now().replace(microsecond=0)
+    args.t_start = t_start.strftime("%Y%m%d_%H%M%S")
 
-    print2logfile("### TRAINING STARTED WITH PARAMS:\n{}".format(run_params), args)
+    train_params = ""
+    for param in vars(args):
+        train_params += param + '=' + str(getattr(args, param)) + '\n'
+
+    print2logfile("### TRAINING STARTED AT {} WITH PARAMS:\n\n{}".format(t_start, train_params), args)
+
     train(train_iter, dev_iter, test_iter, model, optimizer, args)
 
+    t_delta = dt.datetime.now().replace(microsecond=0) - t_start
+    logging.info("\n\n\n### TRAINING ENDED IN {}".format(t_delta))
+    print2logfile("\n\n\n### TRAINING ENDED IN {}".format(t_delta), args)
 
 #
 #
@@ -61,7 +68,7 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
 
     for epoch in range(args.epochs):
 
-        print2logfile("\n\n\n\n-------------------------epoch "+ str(epoch) +"-------------------------",args)
+        print2logfile("\n\n\n\n-------------------------epoch "+ str(epoch) +"-------------------------", args)
         model.train()
 
         train_loss = 0
@@ -122,7 +129,7 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
 
             dataset = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
             model_name = '{}_{}_{}_{}_epoch_{}_dev_f1_{:.6f}.pth.tar'.format(args.model, dataset, args.sequence,
-                                                                             args.exec_time, epoch, dev_f1)
+                                                                             args.t_start, epoch, dev_f1)
             # example model name: bert_dp_TQA_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
 
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
