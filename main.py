@@ -39,19 +39,20 @@ if __name__ == '__main__':
     parser.add_argument('--MAX_LEN', default=512, type=int)
     parser.add_argument('--model', default='bert', type=str, help="(options ['bert', 'distilbert'] defaults to 'bert')")
     parser.add_argument('--data_dir', default=None, required=True, type=str)
-    parser.add_argument('--prepare', default=False, type=str2bool, help="(options [True, False] defaults to False)")
+    # parser.add_argument('--prepare', default=True, type=str2bool, help="(options [True, False] defaults to True)")
     parser.add_argument('--experiment', default=False, type=str2bool, help="(options [True, False] defaults to False)")
     parser.add_argument('--sequence', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TQA')")
     parser.add_argument('--num_labels', default=None, type=int, help="Number of classes in dataset")
     parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
+    parser.add_argument('--labels', default=None, required=True, type=str, help="(options ['sum_class', 'mean_class', 'median_class']")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this version in jupyter notebooks to avoid conflicts
 
     init_random_seeds(args.seed)
 
-    if args.prepare:
-        prepare_data(args)
+    # if args.prepare:
+    prepare_data(args)
 
     df_train, df_dev, df_test = read_files(args)
 

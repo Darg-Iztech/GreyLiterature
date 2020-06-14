@@ -49,7 +49,7 @@ def divide_users(args, df_raw):
     test_users = []
 
     for i in range(args.num_labels):
-        class_data = df_raw[df_raw['popularity'] == i]
+        class_data = df_raw[df_raw[args.labels] == i]
         user_list = class_data['user_id'].unique()
         tr, t = train_test_split(user_list, test_size=0.2, random_state=args.seed)
         tr, d = train_test_split(tr, test_size=0.2, random_state=args.seed)
@@ -84,9 +84,9 @@ def prepare_data(args):
     df_raw = pd.read_csv(os.path.join(args.data_dir, "raw.csv"))
 
     initial_len = len(df_raw)
-    df_raw = df_raw[df_raw['popularity'] > -1]
+    df_raw = df_raw[df_raw[args.labels] > -1]
     latter_len = len(df_raw)
-    args.num_labels = len(np.unique(df_raw['popularity']))
+    args.num_labels = len(np.unique(df_raw[args.labels]))
 
     logging.info("{} out of {} answers are removed. {} remained.".format(
         initial_len-latter_len, initial_len, latter_len
@@ -102,10 +102,13 @@ def prepare_data(args):
     elif args.sequence == "A":
         df_raw['text'] = df_raw['answer_text']
 
-    df_raw['label'] = df_raw['popularity']
+    df_raw['label'] = df_raw[args.labels]
 
     # Get train, dev and test users
     train_users, dev_users, test_users = divide_users(args, df_raw)
+    logging.info('Divided {} users into {} train, {} dev and {} test.'.format(
+        len(np.unique(df_raw['user_id'])), len(train_users), len(dev_users), len(test_users)
+    ))
 
     # Divide examples into train, dev and test sets according to users
     train = df_raw[df_raw['user_id'].isin(train_users)]

@@ -1,0 +1,51 @@
+****** BEFORE FILTERING *******
+num of users = 29181
+num of answers = 59140
+sum_score_min = -30
+sum_score_max = 4391
+mean_score_min = -30.0
+mean_score_max = 2328.0
+median_score_min = -30.0
+median_score_max = 2328.0
+
+
+****** AFTER FILTERING ******** (user_tag_count >= 5)
+num of users = 1942
+num of answers = 22894
+sum_score_min = 0
+sum_score_max = 4391
+mean_score_min = 0.0
+mean_score_max = 407.6
+median_score_min = 0.0
+median_score_max = 68.0
+
+
+********** BY SUM **********
+   sum_class  answers  users
+0         -1    36246  27239
+1          0      163     26
+2          1      476     82
+3          2     2257    349
+4          3     5452    672
+5          4     5432    457
+6          5     4137    226
+7          6     2882     92
+8          7     1697     30
+9          8      398      8
+
+
+********** BY MEDIAN **********
+   median_class  answers  users
+0            -1    36246  27239
+1             0    12692   1093
+2             1     8965    726
+3             2     1237    123
+
+
+********** BY MEAN **********
+   mean_class  answers  users
+0          -1    36246  27239
+1           0     6255    612
+2           1     9502    804
+3           2     5102    359
+4           3     2035    167
