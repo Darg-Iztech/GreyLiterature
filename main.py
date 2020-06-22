@@ -39,12 +39,11 @@ if __name__ == '__main__':
     parser.add_argument('--MAX_LEN', default=512, type=int)
     parser.add_argument('--model', default='bert', type=str, help="(options ['bert', 'distilbert'] defaults to 'bert')")
     parser.add_argument('--data_dir', default=None, required=True, type=str)
-    # parser.add_argument('--prepare', default=True, type=str2bool, help="(options [True, False] defaults to True)")
-    parser.add_argument('--experiment', default=False, type=str2bool, help="(options [True, False] defaults to False)")
     parser.add_argument('--sequence', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TQA')")
-    parser.add_argument('--num_labels', default=None, type=int, help="Number of classes in dataset")
     parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
     parser.add_argument('--labels', default=None, required=True, type=str, help="(options ['sum_class', 'mean_class', 'median_class']")
+    parser.add_argument('--crop', default=1.0, type=float,
+                        help="If 1 no crop, if 0.25 crop 25%% from top and bottom")
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this version in jupyter notebooks to avoid conflicts
@@ -57,25 +56,18 @@ if __name__ == '__main__':
     df_train, df_dev, df_test = read_files(args)
 
     # automatically identify the number of labels:
-    args.num_labels = len(np.union1d(np.union1d(df_train['label'], df_dev['label']), df_test['label']))
-    logging.info('Identified {} labels in the dataset.'.format(args.num_labels))
-
-    # run for a small subset, if set
-    if args.experiment:
-        logging.info('Running in experiment mode! Subsetting the datasets...')
-        df_train = df_train.head(640)
-        df_dev = df_dev.head(160)
-        df_test = df_test.head(200)
+    num_labels = len(np.union1d(np.union1d(df_train['label'], df_dev['label']), df_test['label']))
+    logging.info('Identified {} labels in the dataset.'.format(num_labels))
 
     train_data, dev_data, test_data = tokenize_data(args, df_train, df_dev, df_test)
 
     if args.model == 'bert':
         logging.info('Starting executions with BERT...')
-        config = AutoConfig.from_pretrained("bert-base-uncased", num_labels=args.num_labels)
+        config = AutoConfig.from_pretrained("bert-base-uncased", num_labels=num_labels)
         model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", config=config)
     elif args.model == 'distilbert':
         logging.info('Starting executions with DistilBERT...')
-        config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=args.num_labels)
+        config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=num_labels)
         model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config)
 
     if torch.cuda.is_available() and args.device == 'cuda':

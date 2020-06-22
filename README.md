@@ -18,7 +18,7 @@ python3 main.py --help
 ### Example Run Command:
 
 ```bash
-python3 main.py --data_dir='data/dp' --labels='median_class' --device='cuda' --model='bert'
+python3 main.py --data_dir='data/dp' --labels='sum_class' --device='cuda' --crop=0.25
 ```
 
 > :warning: Here, ``--data-dir`` must include ``raw.csv`` that will be divided into train, dev and test sets, and stored under ``data/dp/TQA`` (since the default sequence is ``'TQA'``).

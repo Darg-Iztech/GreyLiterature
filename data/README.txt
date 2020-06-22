@@ -1,0 +1,2 @@
+user_id,question_id,question_title,question_text,answer_id,answer_text,answer_score,
+user_answer_count,user_sum_score,user_mean_score,user_median_score,sum_class,mean_class,median_class

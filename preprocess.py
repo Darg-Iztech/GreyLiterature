@@ -48,7 +48,8 @@ def divide_users(args, df_raw):
     dev_users = []
     test_users = []
 
-    for i in range(args.num_labels):
+    num_labels = len(np.unique(df_raw[args.labels]))
+    for i in range(num_labels):
         class_data = df_raw[df_raw[args.labels] == i]
         user_list = class_data['user_id'].unique()
         tr, t = train_test_split(user_list, test_size=0.2, random_state=args.seed)
@@ -83,14 +84,30 @@ def prepare_data(args):
     # df_raw = pd.read_csv(args.raw_path, delimiter=',')
     df_raw = pd.read_csv(os.path.join(args.data_dir, "raw.csv"))
 
+    # filter out answers by user answer count
     initial_len = len(df_raw)
-    df_raw = df_raw[df_raw[args.labels] > -1]
-    latter_len = len(df_raw)
-    args.num_labels = len(np.unique(df_raw[args.labels]))
+    df_raw = df_raw[(df_raw['user_answer_count'] >= 5)]
+    filtered_len = len(df_raw)
 
     logging.info("{} out of {} answers are removed. {} remained.".format(
-        initial_len-latter_len, initial_len, latter_len
+        initial_len-filtered_len, initial_len, filtered_len
     ))
+
+    if args.crop < 1.0:
+        # keep only top N and bottom N of answers (based on score)
+        logging.info("Cropping {:.0%} of answers from top and bottom...".format(args.crop))
+        needed_len = int(filtered_len * args.crop)
+        sorting_col = 'user_' + args.labels.split('_')[0] + '_score'
+        df_desc = df_raw.sort_values(sorting_col, ascending=False, inplace=False)
+        df_asc = df_raw.sort_values(sorting_col, ascending=True, inplace=False)
+        df_top = df_desc[0:needed_len].copy()  # credible
+        df_bottom = df_asc[0:needed_len].copy()  # not credible
+        df_top[args.labels] = 1
+        df_bottom[args.labels] = 0
+        df_raw = pd.concat([df_top, df_bottom])
+        logging.info("Cropping done. {} answers from {} users remained.".format(
+            len(df_raw), len(df_raw.groupby('user_id')[[args.labels]].max())
+        ))
 
     # Concatenate T/Q/A according to --sequence argument
     if args.sequence == "TA":
@@ -232,6 +249,9 @@ def print2logfile(string, args):
 
     filename = '{}_{}_{}_{}.log'.format(args.model, dataset_name, args.sequence, args.t_start)
     # example filename: bert_dp_TQA_20200609_164520.log
+
+    if not os.path.exists(args.checkpoint_dir):
+        os.makedirs(args.checkpoint_dir)
 
     log_path = os.path.join(args.checkpoint_dir, filename)
     with open(log_path, "a") as logfile:
