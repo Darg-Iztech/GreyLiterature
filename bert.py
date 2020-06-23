@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import RandomSampler, SequentialSampler, DataLoader
 import numpy as np
+import pandas as pd
 import datetime as dt
 import os
 import logging
@@ -12,7 +13,8 @@ from preprocess import print2logfile
 stats_head = '{0:>5}|{1:>7}|{2:>7}|{3:>7}|{4:>7}|{5:>7}|{6:>7}|{7:>7}|{8:>7}|{9:>7}|{10:>7}'
 stats_values = '{0:>5}|{1:>6.5f}|{2:>6.5f}|{3:>6.5f}|{4:>6.5f}|{5:>6.5f}|{6:>6.5f}|' + \
                '{7:>6.5f}|{8:>6.5f}|{9:>6.5f}|{10:>6.5f}'
-
+stats_head_vals = ['Epoch', 'T-Acc', 'T-F1', 'T-Rec', 'T-Prec', 'T-Loss',
+                   'D-Acc', 'D-F1', 'D-Rec', 'D-Prec', 'D-Loss']
 #
 #
 #
@@ -57,13 +59,21 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
     best_dev_f1 = -1
     prev_best_model_name = ""  # to delete when there is a new best
 
+    # create df and csv for stats
+    stats_df = pd.DataFrame(columns=stats_head_vals)
+    dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
+    stats_csv_name = '{}_{}_{}_{}_{}.csv'.format(
+        args.model, dataset_name, args.sequence, args.labels.split('_')[0], args.t_start)
+    # example filename: bert_dp_TQA_median_20200609_164520.csv
+    stats_csv_path = os.path.join(args.checkpoint_dir, stats_csv_name)
+    stats_df.to_csv(stats_csv_path, sep=',', index=False)
+
     n_total_steps = len(train_iter)
     total_iter = len(train_iter) * args.epochs
 
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_iter)
 
-    logging.info(stats_head.format('Epoch', 'T-Acc', 'T-F1', 'T-Rec', 'T-Prec', 'T-Loss',
-                                   'D-Acc', 'D-F1', 'D-Rec', 'D-Prec', 'D-Loss'))
+    logging.info(stats_head.format(*stats_head_vals))
 
 
     for epoch in range(args.epochs):
@@ -114,10 +124,15 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
             stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
                                 dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
 
-        print2logfile(stats_head.format('Epoch', 'T-Acc', 'T-F1', 'T-Rec', 'T-Prec', 'T-Loss',
-                                   'D-Acc', 'D-F1', 'D-Rec', 'D-Prec', 'D-Loss'), args)
+        print2logfile(stats_head.format(*stats_head_vals), args)
         print2logfile(stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
                                 dev_acc, dev_f1, dev_recall, dev_prec, dev_loss), args)
+
+        # append epoch stats to stats csv file
+        epoch_stats_df = pd.DataFrame(columns=stats_head_vals)
+        epoch_stats_df.at[0] = np.around([epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
+                                          dev_acc, dev_f1, dev_recall, dev_prec, dev_loss], 4)
+        epoch_stats_df.to_csv(stats_csv_path, mode='a', header=False, index=False)
 
         if best_dev_f1 < dev_f1:
             logging.info('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
@@ -128,9 +143,9 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
             best_dev_f1 = dev_f1
 
             dataset = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
-            model_name = '{}_{}_{}_{}_epoch_{}_dev_f1_{:.6f}.pth.tar'.format(args.model, dataset, args.sequence,
-                                                                             args.t_start, epoch, dev_f1)
-            # example model name: bert_dp_TQA_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
+            model_name = '{}_{}_{}_{}_{}_epoch_{}_dev_f1_{:.2f}.pth.tar'.format(
+                args.model, dataset, args.sequence, args.labels.split('_')[0], args.t_start, epoch, dev_f1)
+            # example model name: bert_dp_TQA_median_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
 
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
 
