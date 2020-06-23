@@ -56,7 +56,7 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 
 
 def train(train_iter, dev_iter, test_iter, model, optimizer, args):
-    best_dev_f1 = -1
+    best_dev_score = -1.0  # acc for binary, f1 for multilabel classification
     prev_best_model_name = ""  # to delete when there is a new best
 
     # create df and csv for stats
@@ -134,18 +134,26 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
                                           dev_acc, dev_f1, dev_recall, dev_prec, dev_loss], 4)
         epoch_stats_df.to_csv(stats_csv_path, mode='a', header=False, index=False)
 
-        if best_dev_f1 < dev_f1:
-            logging.info('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
-                         dev_acc=dev_f1, best_dev_acc=best_dev_f1))
-            print2logfile('New dev acc {dev_acc} is larger than best dev acc {best_dev_acc}'.format(
-                         dev_acc=dev_f1, best_dev_acc=best_dev_f1), args)
+        if args.crop == 1.0:
+            dev_score = dev_f1
+            dev_score_name = 'f1'
+        else:
+            dev_score = dev_acc
+            dev_score_name = 'acc'
 
-            best_dev_f1 = dev_f1
+        if best_dev_score < dev_score:
+            logging.info('New dev {} {:.4f} is larger than best dev {} {:.4f}'.format(
+                         dev_score_name, dev_score, dev_score_name, best_dev_score))
+            print2logfile('New dev {} {:.4f} is larger than best dev {} {:.4f}'.format(
+                         dev_score_name, dev_score, dev_score_name, best_dev_score), args)
+
+            best_dev_score = dev_score  # set the new best
 
             dataset = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
-            model_name = '{}_{}_{}_{}_{}_epoch_{}_dev_f1_{:.2f}.pth.tar'.format(
-                args.model, dataset, args.sequence, args.labels.split('_')[0], args.t_start, epoch, dev_f1)
-            # example model name: bert_dp_TQA_median_20200609_162054_epoch_4_dev_f1_0.213208.pth.tar
+            model_name = '{}_{}_{}_{}_{}_epoch_{}_dev_{}_{:.2f}.pth.tar'.format(
+                args.model, dataset, args.sequence, args.labels.split('_')[0],
+                args.t_start, epoch, dev_score_name, dev_score)
+            # example model name: bert_dp_TQA_median_20200609_162054_epoch_4_dev_f1_0.21.pth.tar
 
             save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
 
