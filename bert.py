@@ -58,12 +58,13 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 def train(train_iter, dev_iter, test_iter, model, optimizer, args):
     best_dev_score = -1.0  # acc for binary, f1 for multilabel classification
     prev_best_model_name = ""  # to delete when there is a new best
+    classification_type = 'binary' if args.crop < 1.0 else 'multiclass'
 
     # create df and csv for stats
     stats_df = pd.DataFrame(columns=stats_head_vals)
     dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
-    stats_csv_name = '{}_{}_{}_{}_{}.csv'.format(
-        args.model, dataset_name, args.sequence, args.labels.split('_')[0], args.t_start)
+    stats_csv_name = '{}_{}_{}_{}_{}_{}.csv'.format(
+        args.model, dataset_name, args.sequence, classification_type, args.labels.split('_')[0], args.t_start)
     # example filename: bert_dp_TQA_median_20200609_164520.csv
     stats_csv_path = os.path.join(args.checkpoint_dir, stats_csv_name)
     stats_df.to_csv(stats_csv_path, sep=',', index=False)
@@ -160,7 +161,6 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
 
             dataset = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
 
-            classification_type = 'binary' if args.crop < 1.0 else 'multiclass'
             labeling = args.labels.split('_')[0]
 
             # update best stats

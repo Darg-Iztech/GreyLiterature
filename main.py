@@ -10,7 +10,7 @@ import numpy as np
 # from transformers import BertConfig
 from transformers import AutoConfig, AutoModelForSequenceClassification, AdamW
 
-from preprocess import read_files, prepare_data, tokenize_data
+from preprocess import read_files, prepare_data, tokenize_data, read_tokenized_data
 from bert import run
 
 # Setup colorful logging
@@ -44,6 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('--labels', default=None, required=True, type=str, help="(options ['sum_class', 'mean_class', 'median_class']")
     parser.add_argument('--crop', default=1.0, type=float,
                         help="If 1 no crop, if 0.25 crop 25%% from top and bottom")
+    parser.add_argument('--tokenize', default=True, type=str2bool)  # set false to read pretokenized data
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this version in jupyter notebooks to avoid conflicts
@@ -59,7 +60,10 @@ if __name__ == '__main__':
     num_labels = len(np.union1d(np.union1d(df_train['label'], df_dev['label']), df_test['label']))
     logging.info('Identified {} labels in the dataset.'.format(num_labels))
 
-    train_data, dev_data, test_data = tokenize_data(args, df_train, df_dev, df_test)
+    if args.tokenize:
+        train_data, dev_data, test_data = tokenize_data(args, df_train, df_dev, df_test)
+    else:
+        train_data, dev_data, test_data = read_tokenized_data(args, df_train, df_dev, df_test)
 
     if args.model == 'bert':
         logging.info('Starting executions with BERT...')

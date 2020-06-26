@@ -5,3 +5,4 @@ venv_GreyLit/
 .vscode
 *.tsv
 data/se/
+*.pt

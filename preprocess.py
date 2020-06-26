@@ -235,6 +235,14 @@ def tokenize_data(args, df_train, df_dev, df_test):
     dev_dataset = TensorDataset(dev_ids, dev_att_mask, dev_labels)
     test_dataset = TensorDataset(test_ids, test_att_mask, test_labels)
 
+    # save tokenized data
+    # logging.info("SAVING THE TOKENIZED DATA TO USE LATER...")
+    # classification_type = 'binary' if args.crop < 1.0 else 'multiclass'
+    # suffix = str(args.seed) + '_' + classification_type + '.pt'
+    # torch.save(train_dataset, os.path.join(args.data_dir, args.sequence, 'train_' + suffix))
+    # torch.save(dev_dataset, os.path.join(args.data_dir, args.sequence, 'dev_' + suffix))
+    # torch.save(test_dataset, os.path.join(args.data_dir, args.sequence, 'test_' + suffix))
+
     return train_dataset, dev_dataset, test_dataset
 
 #
@@ -243,6 +251,29 @@ def tokenize_data(args, df_train, df_dev, df_test):
 #
 #
 
+
+def read_tokenized_data(args, df_train, df_dev, df_test):
+    logging.info("LOOKING FOR PRE-TOKENIZED DATA...")
+    classification_type = 'binary' if args.crop < 1.0 else 'multiclass'
+    suffix = str(args.seed) + '_' + classification_type + '.pt'
+    train_path = os.path.join(args.data_dir, args.sequence, 'train_' + suffix)
+    dev_path = os.path.join(args.data_dir, args.sequence, 'dev_' + suffix)
+    test_path = os.path.join(args.data_dir, args.sequence, 'test_' + suffix)
+    if os.path.exists(train_path) and os.path.exists(dev_path) and os.path.exists(test_path):
+        train_dataset = torch.load(train_path)
+        dev_dataset = torch.load(dev_path)
+        test_dataset = torch.load(test_path)
+        logging.info("FOUND AND LOADED THE PRE-TOKENIZED DATA...")
+        return train_dataset, dev_dataset, test_dataset
+    else:
+        logging.info("CANNOT FIND THE PRE-TOKENIZED DATA...")
+        return tokenize_data(args, df_train, df_dev, df_test)
+
+#
+#
+#
+#
+#
 
 def print2logfile(string, args):
     dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
