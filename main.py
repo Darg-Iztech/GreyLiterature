@@ -1,5 +1,6 @@
 import logging
 import argparse
+import random
 import coloredlogs
 import torch
 from str2bool import str2bool
@@ -26,6 +27,8 @@ def init_random_seeds(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+    np.random.seed(seed)
+    random.seed(seed)
 
 
 if __name__ == '__main__':
