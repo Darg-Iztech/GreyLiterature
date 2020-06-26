@@ -247,9 +247,12 @@ def tokenize_data(args, df_train, df_dev, df_test):
 def print2logfile(string, args):
     dataset_name = args.data_dir.split('/')[-1]  # returns 'dp' or 'se'
 
-    filename = '{}_{}_{}_{}_{}.log'.format(
-        args.model, dataset_name, args.sequence, args.labels.split('_')[0], args.t_start)
-    # example filename: bert_dp_TQA_median_20200609_164520.log
+    classification_type = 'binary' if args.crop < 1.0 else 'multiclass'
+
+    filename = '{}_{}_{}_{}_{}_{}.log'.format(
+        args.model, dataset_name, args.sequence, classification_type,
+        args.labels.split('_')[0], args.t_start)
+    # example filename: bert_dp_TQA_binary_median_20200609_164520.log
 
     if not os.path.exists(args.checkpoint_dir):
         os.makedirs(args.checkpoint_dir)
