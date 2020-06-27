@@ -9,6 +9,59 @@ https://drive.google.com/file/d/1OAolz6WbabK7Z439aMM3p0tNV9Q1_xt8
 
 
 
+
+------------- DP (user_answer_count >= 0) -----------
+
+num of answers: 59140
+num of users:   29181
+
+********** user_median_score *********
+num of positives: 45928
+num of negatives: 692
+num of zeros: 12520
+min score: -30.0
+max score: 2328.0
+
+********** user_mean_score *********
+num of positives: 48965
+num of negatives: 723
+num of zeros: 9452
+min score: -30.0
+max score: 2328.0
+
+********** user_sum_score *********
+num of positives: 48965
+num of negatives: 723
+num of zeros: 9452
+min score: -30
+max score: 4391
+
+------------- DP (user_answer_count >= 5) -----------
+
+num of answers: 22894 (38.7%)
+num of users:   1942 (6.7%)
+
+********** user_median_score *********
+num of positives: 20881
+num of negatives: 0
+num of zeros: 2013
+min score: 0.0
+max score: 68.0
+
+********** user_mean_score *********
+num of positives: 22816
+num of negatives: 0
+num of zeros: 78
+min score: 0.0
+max score: 407.6
+
+********** user_sum_score *********
+num of positives: 22816
+num of negatives: 0
+num of zeros: 78
+min score: 0
+max score: 4391
+
 ------------------- DP MULTICLASS -------------------
 
 ********** BY median_class **********
@@ -73,6 +126,64 @@ num of total users: 1007
 
 
 
+
+
+
+
+
+
+
+------------- SE (user_answer_count >= 0) -----------
+
+num of answers: 152745
+num of users:   23413
+
+********** user_median_score *********
+num of positives: 144576
+num of negatives: 1648
+num of zeros: 6521
+min score: -17.0
+max score: 2659.0
+
+********** user_mean_score *********
+num of positives: 146851
+num of negatives: 1938
+num of zeros: 3956
+min score: -17.0
+max score: 2659.0
+
+********** user_sum_score *********
+num of positives: 146851
+num of negatives: 1938
+num of zeros: 3956
+min score: -17
+max score: 18144
+
+------------- SE (user_answer_count >= 5) -----------
+
+num of answers: 123902 (81.1%)
+num of users:   3841 (16.4%)
+
+********** user_median_score *********
+num of positives: 122004
+num of negatives: 25
+num of zeros: 1873
+min score: -1.0
+max score: 40.0
+
+********** user_mean_score *********
+num of positives: 123617
+num of negatives: 191
+num of zeros: 94
+min score: -1.38
+max score: 178.8
+
+********** user_sum_score *********
+num of positives: 123617
+num of negatives: 191
+num of zeros: 94
+min score: -11
+max score: 18144
 
 ------------------- SE MULTICLASS -------------------
 
