@@ -48,6 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--crop', default=1.0, type=float,
                         help="If 1 no crop, if 0.25 crop 25%% from top and bottom")
     parser.add_argument('--tokenize', default=True, type=str2bool)  # set false to read pretokenized data
+    parser.add_argument('--save_models', default=True, type=str2bool)
 
     args = parser.parse_args()
     # args, unknown = parser.parse_known_args()  # use this version in jupyter notebooks to avoid conflicts

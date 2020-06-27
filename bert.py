@@ -57,6 +57,8 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 
 def train(train_iter, dev_iter, test_iter, model, optimizer, args):
     best_dev_score = -1.0  # acc for binary, f1 for multilabel classification
+    best_test_score = -1.0
+    best_test_epoch = 0
     prev_best_model_name = ""  # to delete when there is a new best
     classification_type = 'binary' if args.crop < 1.0 else 'multiclass'
 
@@ -70,7 +72,8 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
     stats_df.to_csv(stats_csv_path, sep=',', index=False)
 
     best_stats_head_vals = ['model', 'dataset', 'sequence', 'classification', 'labeling',
-                            't_start', 'epoch', 'metric', 'dev_score', 'test_score', 'seed']
+                            't_start', 'best_dev_epoch', 'metric', 'best_dev_score',
+                            'best_test_epoch', 'best_test_score', 'seed']
     best_stats_df = pd.DataFrame(columns=best_stats_head_vals)
     best_stats_csv = 'models/best_stats.csv'
     if not os.path.exists('models'):
@@ -167,30 +170,33 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
             best_stats = [args.model, dataset, args.sequence, classification_type,
                 labeling, args.t_start, epoch, dev_score_name, round(dev_score, 4)]
 
-            model_name = '{}_{}_{}_{}_{}_{}_epoch_{}_dev_{}_{}.pth.tar'.format(*best_stats)
-            # example: bert_dp_TQA_binary_median_20200609_162054_epoch_4_dev_acc_0.6751.pth.tar
+            if args.save_models:
+                model_name = '{}_{}_{}_{}_{}_{}_epoch_{}_dev_{}_{}.pth.tar'.format(*best_stats)
+                # example: bert_dp_TQA_binary_median_20200609_162054_epoch_4_dev_acc_0.6751.pth.tar
 
-            save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
+                save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
 
-            if prev_best_model_name != "":
-                delete_prev_best_model(prev_best_model_name, args.checkpoint_dir)
-            prev_best_model_name = model_name  # this model will be deleted in the next time
+                if prev_best_model_name != "":
+                    delete_prev_best_model(prev_best_model_name, args.checkpoint_dir)
+                prev_best_model_name = model_name  # this model will be deleted in the next time
 
-            # RUN TESTS AGAIN IF THERE IS A NEW BEST:
-            _test_label, _test_pred, test_loss = test(test_iter, model, args)
+        # TESTING AT THE END OF EACH EPOCH
+        _test_label, _test_pred, _ = test(test_iter, model, args)
+        print2logfile("\n--Test--", args)
+        test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred, args)
+        logging.info("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
+                acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec))
+        print2logfile("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
+                acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec), args)
 
-            print2logfile("\n--Test--", args)
-            test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred, args)
-            logging.info("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
-                    acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec))
-            print2logfile("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
-                    acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec), args)
+        test_score = test_acc if args.crop < 1.0 else test_f1
+        if best_test_score < test_score:
+            best_test_score = test_score
+            best_test_epoch = epoch
 
     # append the best stats
-    if args.crop < 1.0:
-        best_stats.append(round(test_acc, 4))
-    else:
-        best_stats.append(round(test_f1, 4))
+    best_stats.append(best_test_epoch)
+    best_stats.append(round(best_test_score, 4))
     best_stats.append(args.seed)
     best_stats_df = pd.DataFrame(columns=best_stats_head_vals)
     best_stats_df.at[0] = best_stats
