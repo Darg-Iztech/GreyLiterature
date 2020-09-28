@@ -30,7 +30,7 @@ def run(model, train_data, dev_data, test_data, optimizer, args):
 
     torch.cuda.empty_cache()
 
-    logging.info("Number of training samples {train}, number of dev samples {dev}, number of test samples {test}"
+    logging.info("Number of training samples {train}, number of dev samples {dev}, number of test samples {test}\n"
                  .format(train=len(train_data), dev=len(dev_data), test=len(test_data)))
 
     t_start = dt.datetime.now().replace(microsecond=0)
@@ -86,20 +86,19 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
 
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_iter)
 
-    logging.info(stats_head.format(*stats_head_vals))
-
-
     for epoch in range(args.epochs):
 
         print2logfile("\n\n\n\n-------------------------epoch "+ str(epoch) +"-------------------------", args)
         model.train()
 
         train_loss = 0
+        train_step = 1
         preds = []
         trues = []
 
         for batch_ids in train_iter:
 
+            print(">>>>>>>>> Train step {} / {}".format(train_step, n_total_steps), end="\r")
             input_ids = batch_ids[0].to(args.device)
             att_masks = batch_ids[1].to(args.device)
             labels = batch_ids[2].to(args.device)
@@ -122,6 +121,9 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             scheduler.step()
+            train_step += 1
+
+        print('\n')
 
         train_loss = train_loss / n_total_steps
 
@@ -133,9 +135,10 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
         print2logfile("--Validation--", args)
         dev_acc, dev_f1, dev_recall, dev_prec = calculate_metrics(_dev_label, _dev_pred, args)
 
-        logging.info(
-            stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
-                                dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
+        print(stats_head.format(*stats_head_vals))
+        print(stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
+                                  dev_acc, dev_f1, dev_recall, dev_prec, dev_loss))
+        print()
 
         print2logfile(stats_head.format(*stats_head_vals), args)
         print2logfile(stats_values.format(epoch, train_acc, train_f1, train_recall, train_prec, train_loss,
@@ -184,10 +187,10 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
         _test_label, _test_pred, _ = test(test_iter, model, args)
         print2logfile("\n--Test--", args)
         test_acc, test_f1, test_recall, test_prec = calculate_metrics(_test_label, _test_pred, args)
-        logging.info("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
-                acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec))
-        print2logfile("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
-                acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec), args)
+        #logging.info("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
+                #acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec))
+        #print2logfile("TEST RESULTS:\nAccuracy: {acc}\nF1: {f1}\nRecall: {recall}\nPrecision: {prec}".format(
+                #acc=test_acc, f1=test_f1, recall=test_recall, prec=test_prec), args)
 
         test_score = test_acc if args.crop < 1.0 else test_f1
         if best_test_score < test_score:
@@ -214,9 +217,11 @@ def eval(dev_iter, model, args):
     n_total_steps = len(dev_iter)
     model.eval()
     dev_loss = 0
+    dev_step = 1
     preds = []
     trues = []
     for batch_ids in dev_iter:
+        print(">>>>>>>>> Dev step {} / {}".format(dev_step, len(dev_iter)), end="\r")
         input_ids = batch_ids[0].to(args.device)
         att_masks = batch_ids[1].to(args.device)
         labels = batch_ids[2].to(args.device)
@@ -231,7 +236,9 @@ def eval(dev_iter, model, args):
         preds.append(_pred)
         _label = labels.cpu().data.numpy()
         trues.append(_label)
+        dev_step += 1
 
+    print("\n")
     dev_loss = dev_loss / n_total_steps
     return trues, preds, dev_loss
 
@@ -246,9 +253,12 @@ def test(test_iter, model, args):
     n_total_steps = len(test_iter)
     model.eval()
     test_loss = 0
+    test_step = 1
     preds = []
     trues = []
+    print()
     for batch_ids in test_iter:
+        print(">>>>>>>>> Test step {} / {}".format(test_step, len(test_iter)), end="\r")
         input_ids = batch_ids[0].to(args.device)
         att_masks = batch_ids[1].to(args.device)
         labels = batch_ids[2].to(args.device)
@@ -263,7 +273,9 @@ def test(test_iter, model, args):
         preds.append(_pred)
         _label = labels.cpu().data.numpy()
         trues.append(_label)
+        test_step += 1
 
+    print("\n")
     test_loss = test_loss / n_total_steps
     return trues, preds, test_loss
 
@@ -280,8 +292,8 @@ def calculate_metrics(label, pred, args):
     label_class = np.concatenate([numarray for numarray in label]).ravel()
 
     logging.info('Expected:  {}'.format(label_class[:20]))
-    logging.info('Predicted: {}'.format(pred_class[:20]))
-    logging.info(classification_report(label_class, pred_class))
+    logging.info('Predicted: {}\n'.format(pred_class[:20]))
+    print(classification_report(label_class, pred_class))
     print2logfile('Expected:  {}'.format(label_class[:20]), args)
     print2logfile('Predicted: {}'.format(pred_class[:20]), args)
     print2logfile(classification_report(label_class, pred_class), args)
