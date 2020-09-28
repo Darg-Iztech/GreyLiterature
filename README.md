@@ -4,52 +4,25 @@ Grey literature answer quality / user reputation measurement with BERT and Disti
 
 ## Running Instructions:
 
-* ``--data_dir`` and ``--labels`` are **always** required.
-* Default sequence is ``'TQA'``. Use ``--sequence`` to change.
-* Default model is ``'bert'``. Use ``--model`` to change.
-* Default device is ``'cpu'``. Use ``--device`` to change.
+* ``--data_dir`` and ``--labels`` arguments are **always** required.
+* By default,
+  * ``--sequence = 'TQA'`` :arrow_right: Uses Title+Question+Answer sequence. Alternatively, use ``'A'``, ``'TA'``, or ``'QA'``.
+  * ``--model = 'bert'`` :arrow_right: Uses BERT model. Alternatively, use ``distilbert``.
+  * ``--device = 'cpu'`` :arrow_right: Uses CPU as running device. Alternatively, use ``cuda``.
+  * ``--crop = 1.0`` :arrow_right: Uses 100% of the answers and runs multi-class classification. Alternatively, set a value less than ``1.0``. For example, ``--crop = 0.25`` performs binary classification on the top and bottom 25% of the answers.
+* To see all arguments and options, run ``python3 main.py --help``
 
-**To see all arguments and options:**
-
-```bash
-python3 main.py --help
-```
-
-### Example Run Command:
+## Example Run Command:
 
 ```bash
-python3 main.py --data_dir='data/dp' --labels='sum_class' --device='cuda' --crop=0.25
+python3 main.py --model='distilbert' --data_dir='data/dp' --labels='median_class' --device='cuda' --crop=0.25
 ```
 
-> :warning: Here, ``--data-dir`` must include ``raw.csv`` that will be divided into train, dev and test sets, and stored under ``data/dp/TQA`` (since the default sequence is ``'TQA'``).
+> :warning: Here, ``data/dp`` directory must include ``raw.csv`` file, which will be divided into train, dev and test sets.
 
-<!--
-### 2) To run for a prepared data set:
+> :warning: Since ``--sequence='TQA'`` by default, train, dev and test sets are stored under ``data/dp/TQA``.
 
-If you already divided the dataset into train, dev, and test sets, then set only the ``--data_dir`` and ``--labels``.
-
-**Example:**
-
-```bash
-python3 main.py --data_dir='./data/dp' --labels='mean_class'
-```
-
-> :warning: Here, ``data/dp/TQA`` must include ``train.tsv``, ``dev.tsv``, and ``test.tsv``.
-
-
-### 2) To run in experiment mode:
-
-Set ``--experiment=True`` in addition to ``--data_dir`` and ``--labels``.
-
-**Example:**
- 
-```bash
-python3 main.py --data_dir='./data/dp' --labels='sum_class' --experiment=True
-```
-
-> :warning: Here, the executions will be performed for ``train + dev + test = 1000`` samples.
-
--->
+> :warning: Since ``crop`` is less than ``1.0``, this command runs a binary classification.
 
 ## References
 
