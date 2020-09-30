@@ -15,7 +15,7 @@ from preprocess import read_files, prepare_data, tokenize_data, read_tokenized_d
 # Setup colorful logging
 logging.basicConfig()
 logger = logging.getLogger('predict.py')
-coloredlogs.install(level='DEBUG', logger=logger)
+coloredlogs.install(level='WARNING', logger=logger)
 
 
 def init_random_seeds(seed):
@@ -28,23 +28,23 @@ def init_random_seeds(seed):
 
 def load_model(checkpoint):
     if checkpoint['model'] == 'bert':
-        logger.info('Preparing BERT classifier...')
+        logger.warning('Preparing BERT classifier...')
         config = AutoConfig.from_pretrained("bert-base-uncased", num_labels=checkpoint['num_labels'])
         model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", config=config)
     elif checkpoint['model'] == 'distilbert':
-        logger.info('Preparing DistilBERT classifier...')
+        logger.warning('Preparing DistilBERT classifier...')
         config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=checkpoint['num_labels'])
         model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config)
 
     if checkpoint['device'] == 'cuda':
         if torch.cuda.is_available():
-            logger.info('Running on GPU.')
+            logger.warning('Running on GPU.')
             model.cuda()
         else:
             logger.error("Checkpoint device ('cuda') is not available!")
             sys.exit()
     else:
-        logger.info('Running on CPU.')
+        logger.warning('Running on CPU.')
         model.cpu()
 
     optimizer = AdamW(model.parameters(), lr=checkpoint['lr'], eps=1e-8)
@@ -77,20 +77,20 @@ def tokenize(df, checkpoint):
     answers = df.answer.values
     labels = df.label.values
 
-    logger.info("QUESTIONS:\n {}".format(questions))
-    logger.info("ANSWERS:\n {}".format(answers))
-    logger.info("LABELS:\n {}".format(labels))
+    logger.warning("QUESTIONS:\n {}".format(questions))
+    logger.warning("ANSWERS:\n {}".format(answers))
+    logger.warning("LABELS:\n {}".format(labels))
 
     if checkpoint['model'] == 'bert':
-        logger.info("Loading BERT tokenizer...")
+        logger.warning("Loading BERT tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     elif checkpoint['model'] == 'distilbert':
-        logger.info("Loading DistilBERT tokenizer...")
+        logger.warning("Loading DistilBERT tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
 
-    logger.info("Tokenizing input...")
+    logger.warning("Tokenizing input...")
     ids, att_mask = tokenize_helper(questions, answers, tokenizer, checkpoint['sequence'], checkpoint['max_len'])
-    logger.debug("Converting tokenized input to torch tensor...")
+    logger.warning("Converting tokenized input to torch tensor...")
     ids = torch.cat(ids,dim=0)
     att_mask = torch.cat(att_mask,dim=0)
     labels = torch.tensor(labels, dtype=torch.long)
@@ -135,6 +135,17 @@ def main():
     args = parser.parse_args()
 
     checkpoint = torch.load(args.checkpoint_path)
+
+    logger.warning(("LOADED CHECKPOINT FROM {} \n{{"
+                  "\n  epoch: {}\n  seed: {}\n  lr: {}\n  device: {}\n  model: {}\n  labels: {}"
+                  "\n  num_labels: {}\n  sequence: {}\n  crop: {}\n  max_len: {}\n}}").format(
+                      args.checkpoint_path,
+                      checkpoint['epoch'], checkpoint['seed'], checkpoint['lr'],
+                      checkpoint['device'], checkpoint['model'], checkpoint['labels'],
+                      checkpoint['num_labels'], checkpoint['sequence'], checkpoint['crop'],
+                      checkpoint['max_len']
+                  ))
+
     init_random_seeds(checkpoint['seed'])
 
     if args.test_path == None:
@@ -147,7 +158,6 @@ def main():
     test_iter = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=1)
 
     model, _ = load_model(checkpoint)
-    logger.info('Loaded model from {}'.format(args.checkpoint_path))
     test_label, test_pred = test(test_iter, model, checkpoint['device'])
 
     pred_class = np.concatenate([np.argmax(numarray, axis=1) for numarray in test_pred]).ravel()
