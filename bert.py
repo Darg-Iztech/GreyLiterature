@@ -177,7 +177,7 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
                 model_name = '{}_{}_{}_{}_{}_{}_epoch_{}_dev_{}_{}.pth.tar'.format(*best_stats)
                 # example: bert_dp_TQA_binary_median_20200609_162054_epoch_4_dev_acc_0.6751.pth.tar
 
-                save_model(model, optimizer, epoch, model_name, args.checkpoint_dir)
+                save_model(model, optimizer, epoch, model_name, args)
 
                 if prev_best_model_name != "":
                     delete_prev_best_model(prev_best_model_name, args.checkpoint_dir)
@@ -311,16 +311,25 @@ def calculate_metrics(label, pred, args):
 #
 
 
-def save_model(model, optimizer, epoch, model_name, checkpoint_dir):
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
+def save_model(model, optimizer, epoch, model_name, args):
+    if not os.path.exists(args.checkpoint_dir):
+        os.makedirs(args.checkpoint_dir)
 
-    save_path = os.path.join(checkpoint_dir, model_name)
+    save_path = os.path.join(args.checkpoint_dir, model_name)
 
     torch.save({
         'epoch': epoch,
         'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict()
+        'optimizer': optimizer.state_dict(),
+        'seed': args.seed,
+        'lr': args.lr,
+        'device': args.device,
+        'model': args.model,
+        'labels': args.labels,
+        'num_labels': args.num_labels,
+        'sequence': args.sequence,
+        'crop': args.crop,
+        'max_len': args.MAX_LEN
     }, save_path)
 
     logging.info('Best model is saved to {save_path}'.format(save_path=save_path))

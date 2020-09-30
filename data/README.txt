@@ -5,7 +5,7 @@ user_answer_count,user_sum_score,user_mean_score,user_median_score,sum_class,mea
 
 
 DOWNLOAD:
-https://drive.google.com/file/d/1OAolz6WbabK7Z439aMM3p0tNV9Q1_xt8
+https://cloud.iyte.edu.tr/index.php/s/WuI9JTTgvW2dwAc
 
 
 

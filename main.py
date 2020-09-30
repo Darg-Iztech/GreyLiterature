@@ -45,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('--sequence', default='TQA', type=str, help="(options ['A', 'TA', 'QA', 'TQA'] defaults to 'TQA')")
     parser.add_argument('--t_start', default=None, type=str, help=argparse.SUPPRESS)
     parser.add_argument('--labels', default=None, required=True, type=str, help="(options ['sum_class', 'mean_class', 'median_class']")
+    parser.add_argument('--num_labels', default=0, type=int)
     parser.add_argument('--crop', default=1.0, type=float,
                         help="If 1 no crop, if 0.25 crop 25%% from top and bottom")
     parser.add_argument('--tokenize', default=True, type=str2bool)  # set false to read pretokenized data
@@ -62,6 +63,7 @@ if __name__ == '__main__':
 
     # automatically identify the number of labels:
     num_labels = len(np.union1d(np.union1d(df_train['label'], df_dev['label']), df_test['label']))
+    args.num_labels = num_labels
     logging.info('Identified {} labels in the dataset.'.format(num_labels))
 
     if args.tokenize:
