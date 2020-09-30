@@ -82,11 +82,9 @@ if __name__ == '__main__':
 
     if torch.cuda.is_available() and args.device == 'cuda':
         logging.info('Running on GPU !!!')
-        args.device = torch.device('cuda')
         model.cuda()
     else:
         logging.info('Running on CPU !!!')
-        args.device = torch.device('cpu')
         model.cpu()
 
     optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)

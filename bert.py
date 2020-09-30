@@ -99,9 +99,9 @@ def train(train_iter, dev_iter, test_iter, model, optimizer, args):
         for batch_ids in train_iter:
 
             print(">>>>>>>>> Train step {} / {}".format(train_step, n_total_steps), end="\r")
-            input_ids = batch_ids[0].to(args.device)
-            att_masks = batch_ids[1].to(args.device)
-            labels = batch_ids[2].to(args.device)
+            input_ids = batch_ids[0].to(torch.device(args.device))
+            att_masks = batch_ids[1].to(torch.device(args.device))
+            labels = batch_ids[2].to(torch.device(args.device))
 
             model.zero_grad()
 
@@ -222,9 +222,9 @@ def eval(dev_iter, model, args):
     trues = []
     for batch_ids in dev_iter:
         print(">>>>>>>>> Dev step {} / {}".format(dev_step, len(dev_iter)), end="\r")
-        input_ids = batch_ids[0].to(args.device)
-        att_masks = batch_ids[1].to(args.device)
-        labels = batch_ids[2].to(args.device)
+        input_ids = batch_ids[0].to(torch.device(args.device))
+        att_masks = batch_ids[1].to(torch.device(args.device))
+        labels = batch_ids[2].to(torch.device(args.device))
 
         # forward pass
         with torch.no_grad():
@@ -259,9 +259,9 @@ def test(test_iter, model, args):
     print()
     for batch_ids in test_iter:
         print(">>>>>>>>> Test step {} / {}".format(test_step, len(test_iter)), end="\r")
-        input_ids = batch_ids[0].to(args.device)
-        att_masks = batch_ids[1].to(args.device)
-        labels = batch_ids[2].to(args.device)
+        input_ids = batch_ids[0].to(torch.device(args.device))
+        att_masks = batch_ids[1].to(torch.device(args.device))
+        labels = batch_ids[2].to(torch.device(args.device))
 
         # forward pass
         with torch.no_grad():
