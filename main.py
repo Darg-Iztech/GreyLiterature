@@ -80,12 +80,15 @@ if __name__ == '__main__':
         config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=num_labels)
         model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config)
 
-    if torch.cuda.is_available() and args.device == 'cuda':
-        logging.info('Running on GPU !!!')
-        model.cuda()
+    if not torch.cuda.is_available():
+        args.device = 'cpu'
+
+    if args.device == 'cuda':
+            logging.info('Running on GPU !!!')
+            model.cuda()
     else:
-        logging.info('Running on CPU !!!')
-        model.cpu()
+            logging.info('Running on CPU !!!')
+            model.cpu()
 
     optimizer = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
 
