@@ -2,8 +2,9 @@
 
 Grey literature answer quality / user reputation measurement with BERT and DistilBERT.
 
-## Training models using DP, SE, or other datasets:
+## Training models using DP, SE, or other datasets
 
+### Dataset:
 When training a model ``--data_dir`` and ``--labels`` arguments are **always** required.
 * ``--data_dir`` :arrow_right: The directory including ``raw.csv`` file, which will be divided into train, dev and test sets. The ``raw.csv`` files for DP and SE are available at [IZTECH Cloud Repository](https://cloud.iyte.edu.tr/index.php/s/WuI9JTTgvW2dwAc).
 * ``--labels`` :arrow_right: The argument that must be set as the name of the column containing the ground truth values for the author classes. Typically, it is set as ``'sum_class'``, ``'mean_class'``, or ``'median_class'``.
@@ -13,6 +14,10 @@ When working on other data sets, be sure to organize the ``raw.csv`` file to inc
 ```
 user_id,question_title,question_text,answer_text,answer_score,user_answer_count,sum_class,mean_class,median_class
 ```
+
+To see a sample ``raw.csv`` file :arrow_right: [data/test/raw.csv](https://github.com/Darg-Iztech/GreyLiterature/blob/master/data/test/raw.csv)
+
+### Options and arguments:
 
 Some default training arguments are:
 * ``--sequence = 'TQA'`` :arrow_right: Uses Title+Question+Answer sequence. Alternatively, use ``'A'``, ``'TA'``, or ``'QA'``.
@@ -25,7 +30,7 @@ To see all training arguments and options, run:
 python3 main.py --help
 ```
 
-## Example Training Command:
+### Example Training Command:
 
 ```bash
 python3 main.py --model='distilbert' --data_dir='data/dp' --labels='median_class' --device='cuda' --crop=0.25
@@ -37,7 +42,7 @@ python3 main.py --model='distilbert' --data_dir='data/dp' --labels='median_class
 
 > :warning: Since ``crop`` is less than ``1.0``, this command runs a binary classification.
 
-# Testing with a Pre-trained Model:
+## Testing with a Pre-trained Model
 
 **Step 1)** Download the pre-trained model with 71.6% accuracy from [HERE]() (~1.3 Gb ``pth.tar`` file).
 
@@ -45,15 +50,15 @@ python3 main.py --model='distilbert' --data_dir='data/dp' --labels='median_class
 
 The ``predict.py`` module takes 2 arguments:
 * ``--checkpoint_path`` (required) :arrow_right: Path to ``pth.tar`` file downloaded in Step 1.
-* ``--test_path`` (optional) :arrow_right: Path to the CSV file including questions and answers of which author reputability will be predicted. The file must include ``question,answer,label`` columns.
+* ``--test_path`` (optional) :arrow_right: Path to the CSV file including questions and answers of which author reputability will be predicted. The file must include ``question,answer,label`` columns. If the ``--test_path`` is not set, the question, answer, and label are taken as console input.
 
-> :warning: If ``--test_path`` is not set, the question, answer, and label are taken as console input.
+To see a sample ``test.csv`` file :arrow_right: [data/test/test.csv](https://github.com/Darg-Iztech/GreyLiterature/blob/master/data/test/test.csv)
 
-## Example Testing Command:
+### Example Testing Commands:
 
-**Example 1)** ``--test_path`` is set to ``test_01.csv`` file that includes 3 answers from 3  authors:
+**Example 1)** ``--test_path`` is set to ``test.csv`` file that includes 3 answers from 3  authors:
 ```bash
-python3 predict.py --checkpoint_path='./cp_01.pth.tar' --test_path='./test_01.csv'
+python3 predict.py --checkpoint_path='models/checkpoint.pth.tar' --test_path='data/test/test.csv'
 ------------------
 Expected:  [0 1 0]
 Predicted: [1 1 0]
@@ -61,7 +66,7 @@ Predicted: [1 1 0]
 
 **Example 2)** ``--test_path`` is not set:
 ```bash
-python3 predict.py --checkpoint_path='./cp_01.pth.tar'
+python3 predict.py --checkpoint_path='models/checkpoint.pth.tar'
 ------------------
 Enter question (as plain text): Which kind of Singleton is this?
 Enter answer (as plain text): It is not a singleton. It is multiton pattern.

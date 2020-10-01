@@ -137,10 +137,11 @@ def main():
     checkpoint = torch.load(args.checkpoint_path)
 
     logger.warning(("LOADED CHECKPOINT FROM {} \n{{"
-                  "\n  epoch: {}\n  seed: {}\n  lr: {}\n  device: {}\n  model: {}\n  labels: {}"
+                  "\n  epoch: {}\n  dev_score: {:.4f}\n  test_score: {:.4f}\n  seed: {}\n  lr: {}"
+                  "\n  device: {}\n  model: {}\n  labels: {}"
                   "\n  num_labels: {}\n  sequence: {}\n  crop: {}\n  max_len: {}\n}}").format(
-                      args.checkpoint_path,
-                      checkpoint['epoch'], checkpoint['seed'], checkpoint['lr'],
+                      args.checkpoint_path, checkpoint['epoch'], checkpoint['dev_score'],
+                      checkpoint['test_score'], checkpoint['seed'], checkpoint['lr'],
                       checkpoint['device'], checkpoint['model'], checkpoint['labels'],
                       checkpoint['num_labels'], checkpoint['sequence'], checkpoint['crop'],
                       checkpoint['max_len']

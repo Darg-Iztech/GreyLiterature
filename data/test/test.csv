@@ -1,0 +1,12 @@
+question,answer,label
+"Is there any other way to implement Singleton Pattern in javascript? Trying to implement singleton pattern in javascript following some tutorials. Just wondering if there is any other way to implement the same ?
+
+Implementing it by running anonymous function at onLoad and assiging it to some variable. Can we implement it without running this function at onLoad ?
+","You could always write a function to abstract away the boilerplate for writing singletons. For example this is what I would do:
+
+Then you can use this function to create singletons as follows:
+
+After that you use the singleton as you normally would:
+
+Hope that helps.
+",0

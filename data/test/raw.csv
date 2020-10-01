@@ -1,0 +1,1413 @@
+user_id,question_id,question_title,question_text,answer_id,answer_text,answer_score,user_answer_count,user_sum_score,user_mean_score,user_median_score,sum_class,mean_class,median_class
+61700,2035175,Ideas for structure of .net GUI app,"I'm looking for a strategy on how to structure a VB.net GUI app.  I have a application that is basically an interface to a database.   It is comprised of a TabControl with 6 tabs, each tab has a few custom controls and performs a business operation on the database. 
+Tab Functions:
+
+Parse an XLS into SQL inserts and commit to db
+Generate an XLS from db query results
+Generate an XLS from db query results
+Quick access data lookup from the db (write to log box)
+Manual database modification via GUI form (insert / update statement execution)
+DB connection settings
+
+Common Code Functions:
+
+Connecting/disconnecting to/from the DB
+Executing non-queries
+Executing queries
+Iterating over query results
+Writing to an XLS
+Common subqueries (DB provider doesn't allow views)
+
+Currently I've got most all of the operations built into event handler functions on the GUI thread.  I'd like to move to a more object-oriented structure for code reusability and easier multi-threading.  
+I'm struggling with a few design things:
+
+What objects / classes makes sense?  
+Are there industry-standard best practices or design patterns around separating GUI and backend functionality?  Any particularly good articles I should read?
+Is BackgroundWorker the best way to execute the backend functions?  
+
+Thanks-
+Jonathan
+",2035234,"
+...is probably too big a question to be readily answered; sorry.  But you can make a reasonable first pass by the traditional ""looking for nouns"" technique.
+For Windows Forms, check out Model-View-Controller or Model-View-Presenter.  (If you use WPF or Silverlight on a future project, you'll want to check out an alternative pattern called Model-View-ViewModel, but that doesn't work too well with WinForms.)
+Yes, BackgroundWorker is a good bet for WinForms background tasks because it provides a convenient way to deliver progress and completion notifications.  It does have some limitations, but explicit threading via Thread or ThreadPool would probably be superfluous here, and would just lead to extra code for GUI feedback.  So go with BackgroundWorker at least as a starting point and consider explicit threading only if it starts to cause you pain.
+
+",4,6,57,9.5,4,4,3,2
+61700,2473436,"abstract method signature, inheritance, and &quot;Do&quot; naming convention","I'm learning about design patterns and in examples of code I've seen a convention where the abstract class declares a method, for example:
+
+and then
+
+My question is on why these two methods exist, since they appear to serve the same purpose. Is this so that the base class GetSomething() method logic cannot be overridden by inherited classes? But then again, the method is marked virtual, so it can be overridden anyway. What is the usefulness here in requiring derived class implementers to implement the abstract method when the virtual method can be called anyway?
+",2473453,"One common reason is to put standard handling around the abstract method.  For example, perhaps the abstract method can only be called in certain circumstance -- say, after the splines have been reticulated.  In that case, it makes sense to check _areSplinesReticulated in one place -- the public GetSomething method -- rather than requiring every implementation of the abstract method to perform its own checking.  Or maybe GetSomething is 90% boilerplate but requires a bit of additional logic or a crucial piece of information that only derived classes can supply.
+This is a form of the Template Method pattern.
+A non-virtual GetSomething means every derived class gets the standard handling and only gets to participate via their custom version of DoGetSomething.  If GetSomething is virtual, that means derived classes can bypass the standard handling if they want to.  Either of these is a viable strategy depending on whether the standard GetSomething handling is integral to the class logic (e.g. invariants) or whether the base class wants to grant maximum flexibility to derived classes.
+",4,6,57,9.5,4,4,3,2
+61700,2576810,What situations does a Monostate pattern model?,"I know what both a Singleton or a Monostate are and how to implement them. Although I can see many uses for a Singleton, I can't imagine a situation where I would want to let the user create as many instances of my class although in reality only one really exists behind the scenes.
+Can anybody help me here? I know that for several reasons one should stay away from both patterns, but in theory, what kind of problems does the Monostate model?
+Thanks
+",2577265,"Monostate, to my eyes, is not a pattern you're likely to implement at an application level, but can be useful at an infrastructure level.  This comment on Alex Martelli's presentation of the pattern in Python provides an illustrative example.
+Consider a DCOM or .NET remoting scenario, where we have an object on the server representing a Person named Bob.  Bob is not a singleton, because Bob is not the only Person.  But several clients may be talking to Bob at the same time.  In each case, the client does not have a direct reference to Bob (who is in a different address space or on a different machine), but instead has a proxy object.  And that proxy object is local to that particular client.
+So we have multiple proxy objects, each with different identity, but each proxying the state and behaviour of Bob the server object -- and therefore sharing state and behaviour.  If client Alice updates Bob's state (by calling a method on her proxy object), then client Carol will see changes in Bob's behaviour (when she calls methods on her proxy object).  Alice and Carol's proxy objects do not have the same object identity, but do have the same state and behaviour: both represent Bob.  The two proxies exhibit the Monostate pattern.
+(The whole thread is worth reading for a more detailed discussion, but the above for me was where it clicked into focus.)
+",4,6,57,9.5,4,4,3,2
+61700,6989973,When does it make sense to use a public field?,"This is a question I have had for a while now:
+When does it make sense to expose a field publicly like so?
+
+The downside of doing this (in addition to angering OOP elitists) is that you have to introduce a breaking change to your API if you ever need to add any logic on top of this data. I suppose that is what the elitists are on about.
+Best practice in Java and C# has long been to use getters/setters or properties to access fields.
+
+C# has evolved this to pretty simple syntax with automatic properties:
+
+Lazy me still feels this is too long though since it something I find myself doing a lot. More importantly, I am not sure I know where a public field would make more sense.
+Why not just treat publicly declared fields as properties (or methods) behind the scenes? That way it would be impossible to anger decoupling gods and be a bit less typing to boot.
+
+For a property that does nothing but wrap the underlying field, I am pretty sure the JIT optimizes the method calls away so performance is probably not the issue. Any thoughts? (other than the proper case convention for the field name)
+EDIT: Thanks for all the responses. I feel like perhaps not everyone is understanding my question though. When would a public field be a better choice than a property? Why is it a better choice? If the only reason is convenience (less typing and clutter), then what would be the downside of having the compiler generate a property ""under-the-hood"" whenever a public field is encountered. Basically, it would be impossible to create a true public field (because they would all be properties). What would be wrong with that? Thanks.
+",6990359,"One scenario, at least in .NET, is interop with C APIs.  You'll often declare C# or VB versions of Windows API structs, and it's common to use public fields for these because the normal reason for making fields private -- to prevent someone messing with them behind your back -- breaks down.  In this case, you know that something is going to be changing the fields behind your back -- that's the whole purpose of having the struct!
+Of course you typically won't expose those unencapsulated structs to application code -- you'll treat them as private elements of the P/Invoke module, so application code still won't be dealing with the public fields.
+",1,6,57,9.5,4,4,3,2
+61700,771876,Activator.CreateInstance - Explain it so I can understand,"So I am looking at some sample code, and I am not sure what to make of this: 
+
+What is the difference between the above and how I would normally make a singleton:
+
+",771899,"The first code fragment reads the type of PollsProvider to create from config, whereas the second has the type of PollsProvider compiled in.  The first fragment therefore allows you to switch in configuration (without a recompile/redeploy) between RealPollsProvider, TestPollsProvider, FiddledByOurEvilPaymastersPollsProvider, etc.
+",5,6,57,9.5,4,4,3,2
+61700,1698889,Raise Events in .NET on the main UI thread,"I'm developing a class library in .NET that other developers will consume eventually. This library makes use of a few worker threads, and those threads fire status events that will cause some UI controls to be updated in the WinForms / WPF application.
+Normally, for every update, you would need to check the .InvokeRequired property on WinForms or equivalent WPF property and invoke this on the main UI thread for updating. This can get old quickly, and something doesn't feel right about making the end developer do this, so...
+Is there any way that my library can fire/invoke the events/delegates from the main UI thread?
+In particular...
+
+Should I automatically ""detect"" the ""main"" thread to use?
+If not, should I require the end developer to call some (pseudo)  method when the application starts so I can grab the target thread from that call?
+
+",1698918,"Your library could check the Target of each delegate in the event's invocation list, and marshal the call to the target thread if that target is ISynchronizeInvoke:
+
+Another approach, which makes the threading contract more explicit, is to require clients of your library to pass in an ISynchronizeInvoke or SynchronizationContext for the thread on which they want you to raise events.  This gives users of your library a bit more visibility and control than the ""secretly check the delegate target"" approach.
+In regard to your second question, I would place the thread marshalling stuff within your OnXxx or whatever API the user code calls that could result in an event being raised.
+",39,6,57,9.5,4,4,3,2
+136208,1310214,Register an object creator in object factory,"I have the convenient object factory template that creates objects by their type id names. The implementation is pretty obvious:  contains the map from  to object creator function. Then all objects to be created shall be registered in this factory.
+I use the following macro to do that:
+
+where  is
+
+Usage
+
+Classes are defined and registered in factory simultaneously.
+The problem is that  static objects are defined in .h files, so they will be added to every translation unit. The same object creator will be registered several times, and, more important, there will be a lot of redundant objects with static storage duration.
+Is there any way to do such elegant registration (not to copy/paste class and interface names), but do not spread redundant static objects around the globe?
+If a good solution needs some VC++ specific extensions (not conforming to C++ standard), I will be OK with that.
+",1310392,"So you want to put variables definitions in header file?  There is a portable way: static variables of template classes.  So we get:
+
+Note that I've kept the inheritance of IFoo non virtual.  If there is any risk of inheriting from that class multiple times, it should be virtual.
+",5,5,20,4,4,2,2,2
+136208,11631513,Long delegation chains in C++,"
+This is definitely subjective, but I'd like to try to avoid it
+  becoming argumentative. I think it could be an interesting question if
+  people treat it appropriately.
+
+In my several recent projects I used to implement architectures where long delegation chains are a common thing.
+Dual delegation chains can be encountered very often:
+
+And triple delegation is not rare at all:
+
+Delegation chains of higher order exist but are really scarce.
+In above mentioned examples no NULL run-time checks are performed since the objects used are always there and are vital to the functioning of the program and
+explicitly constructed when execution starts. Basically I used to split a delegation chain in these cases:
+1) I reuse the object obtained through a delegation chain:
+
+2) An intermediate object somewhere in the middle of the delegation chain should be checked for NULL before usage. Eg.
+
+I used to fight the case (2) by providing proxy objects so that a method can be invoked on non-NULL object leading to an  result.
+My questions are: 
+
+Is either of cases (1) or (2) a pattern or an antipattern?
+Is there a better way to deal with long delegation chains in C++?
+
+Here are some pros and cons I considered while making my choice:
+Pros:
+
+it is very descriptive: it is clear out of 1 line of code where did the object came from
+long delegation chains look nice
+
+Cons:
+
+interactive debugging is labored since it is hard to inspect more than one temporary object in the delegation chain
+
+I would like to know other pros and cons of the long delegation chains. Please, present your reasoning and vote based on how well-argued opinion is and not how well you agree with it.
+",12124237,"Such long chain of delegation should not happens if you follow the Law of Demeter. I've often argued with some of its proponents that they where holding themselves to it too conscientiously, but if you come to the point to wonder how best to handle long delegation chains, you should probably be a little more compliant with its recommendations.
+",6,5,20,4,4,2,2,2
+136208,11921135,Thread safe singleton in C++,"I have been reading about thread safe singletons and the implementation I find everywhere has a getInstance() method something like this:
+
+
+Is this actually thread safe?
+Have I missed something or is there a small chance this function will return an uninitialized instance because 'initialized' may be reordered and set before instance?
+
+This article is on a slightly different topic but the top answer describes why I think the above code is not thread safe:
+Why is volatile not considered useful in multithreaded C or C++ programming?
+",11921160,"Not a good idea. Look for double check locking. For instance:
+http://www.drdobbs.com/cpp/c-and-the-perils-of-double-checked-locki/184405726
+http://www.drdobbs.com/cpp/c-and-the-perils-of-double-checked-locki/184405772
+",4,5,20,4,4,2,2,2
+136208,2355195,Check for derived type (C++),"How do I check at runtime if an object is of type ClassA or of derived type ClassB? In one case I have to handle both instances separately
+
+Maybe I could say that the derived class ClassB has some special capabilities. But how do I do that without changing the existing class ClassA ?
+",2355207,"Slighlty different that what you asked for
+
+",2,5,20,4,4,2,2,2
+136208,1171818,Annotatable Control Flow Graph with Boost?,"I have a control flow graph representing a single procedure of my intermediate language code. Nodes and Edges are annotated via vertex/edge properties and contain instructions resp branch information. 
+Now I want to perform data flow analysis on this graph and feed that graph into each data flow analysis module. Each module should be able to annotate the CFG with its own data.
+Problems I need to solve: 
+
+I don't know upfront how many annotations are introduced by the data flow analysis modules (because I will implement additional analysis modules in the future)
+I don't know anything about the type of annotation introduced by a specific data flow analysis module
+Each data flow analysis module should exist independently from the other modules, i.e. module A shouldn't be concerned about the annotations introduced by module B 
+
+Do you see any chance to realize all of the above requirements?
+Any comments or advises are highly appreciated
+Update:
+To be more specific, I basically want to decouple my annotations from the Graph type. When using the usual vertex/edge properties the Graph type itself is always ""polluted"" (and is therefore dependent on the vertex/edge property types) by the contained property types.  
+",1172046,"See the ""Using Property Maps"" chapter of the documentation of the boost graph library.  Especially the ""Constructing an Exterior Property Map"" section.  If that doesn't answer your question, could you clarify what is missing?
+",3,5,20,4,4,2,2,2
+6330,1609048,Is it bad practice for a delegate to have a reference to the object for which it is the delegate?,"I'm using the delegate pattern for one of my objects.  My idea is that I will be able to swap the delegate out later for a different delegate implementing a different strategy.  I suppose this is just as much the strategy pattern as the delegate pattern.
+My question is, is it bad practice for my delegate to have a reference back to the object for which it is the delegate?  There are a couple properties of that object that I need to have access to regardless of which delegate/strategy I use.  If this is bad form, how should I get access to the properties?
+",1609754,"It is not at all bad practice.  The delegate pattern allows for a class to have a generic way to talk to any number of objects as long as the implement the same protocol.  But the class on which you set the delegate also will usually have a number of public properties or methods that allow you to query or alter what the class is doing, in response to which the class may in turn trigger a number of the delegate calls.  So you need a reference of the class to which you are the delegate, in order to tell the object to do something different than it is already, and of course to release it when you are through with it!
+This is also why it's important to always have any delegate properties as assign, and not retain, properties.  That way when the originating class is released it will actually be released, instead of having delegate objects it is holding onto causing a retain loop that keeps both around.
+It's also why whenever you are being released, you should set the delegate reference to nil in anything you may have a delegate reference set.  This way a class will not have an invalid delegate reference if the delegate is released before the class that uses a delegate.
+",3,5,26,5.2,4,3,2,2
+6330,145154,What should my Objective-C singleton look like?,"My singleton accessor method is usually some variant of:
+
+What could I be doing to improve this?
+",2294440,"I have an interesting variation on sharedInstance that is thread safe, but does not lock after the initialization.  I am not yet sure enough of it to modify the top answer as requested, but I present it for further discussion:
+
+",9,5,26,5.2,4,3,2,2
+6330,104339,Objective-C switch using objects?,"I'm doing some Objective-C programming that involves parsing an NSXmlDocument and populating an objects properties from the result.
+First version looked like this:
+
+But I don't like the  pattern this produces. Looking at the  statement I see that i can only handle ,  etc and not objects... so is there a better implementation pattern I'm not aware of?
+BTW I did actually come up with a better solution for setting the object's properties, but I want to know specifically about the - vs  pattern in Objective-C
+",110244,"Although there's not necessarily a better way to do something like that for one time use, why use ""compare"" when you can use ""isEqualToString""?  That would seem to be more performant since the comparison would halt at the first non-matching character, rather than going through the whole thing to calculate a valid comparison result (though come to think of it the comparison might be clear at the same point)  - also though it would look a little cleaner because that call returns a BOOL.
+
+",3,5,26,5.2,4,3,2,2
+6330,2494632,Dealing with the lack of closures in Objective-C,"Maybe it's just the fact that I've been using http://nodejs.org/ lately, but the lack of closures in Objective-C (iphone) has been really hard to work around. 
+For example, I'm creating service classes. Each service class can have several methods, each of which makes a different URL request. I can use the delegate pattern, but that means that I have to create a new service each time I want to call a method on it (because it has to store the delegate and selector for that request, and new method calls would overwrite them). 
+Even more difficult for me is the fact that I can't easily keep local variables around in the scope for a callback. I have to store anything I want to send back to the delegate on the service class itself, which makes it harder to have more than one method on each class. 
+How do you pros do it? Should I just quit whining and do it another way?
+",2495670,"Any time you find yourself needing multiple delegates, the answer is notifications.
+For something like a service class you'd probably make a singleton, and notify interested parties when a service request was complete via a notification.
+Not that blocks are not an interesting solution to that problem, it's just that I felt you should know there are alternatives.
+",7,5,26,5.2,4,3,2,2
+6330,1053704,Organizing instance variables in a view hierarchy,"When programming for the iPhone, I find that I often need to use the same instance of an object in multiple views.  What is the best way to handle this?  My strategy so far has been to create it as a member of the root view and pass it to subsequent views which retain it as a member.  However, this does not seem like a very good approach since it would be very difficult to update what the reference in each class is pointing to.  I have also seen singleton classes as well as the AppDelegate used for this purpose.  As an iPhone developer, how do you handle this problem in large apps?
+",1053730,"The App Delegate approach is easy to do, the downside is that everything has to go fetch the delegate and then get the shared object.
+Singletons mean only classes using the singleton have to know about it, but can be harder to write unit tests against or clean up properly in low memory situations.  Also you must write the singleton classes more carefully so they work correctly (look at Apple docs on singletons).
+Passing an object around can get old because sometimes you end up only having a link to the object to pass to someone else, so I would avoid that approach unless you were just passing from one parent to a few immediate children.
+Between the first two, I lean a little towards singletons just because of the dependency graph being simpler (as mentioned classes only including singleton headers they care about instead of a whole bunch from the App Delegate).  If you had a number of them the thing to do would be to make singleton distribution classes that held onto single instances of groups of classes, just to keep the app delegate lighter and not to have to make so many classes that were true singletons.
+I do like using the app delegate to hold on to the root of your actual UI, like the tab bar controller or primary view controller.  That just seems more natural than stuffing it elsewhere.
+",4,5,26,5.2,4,3,2,2
+492901,4719822,Factory / Abstract Factory confusion,"After ~10 months of procedural PHP, I'm now trying to wrap my head around basic OOP principles and design patterns. This is a hobby, and I haven't nearly as much time as I'd like to pursue it, so please forgive the rather low level of this question.
+My site (currently 100% procedural) is at heart a library. Visitors send the Library script 2 datapoints - an item  and item .
+ uses the item type to select an include, and the include grabs the code to hit the database and then build the page.
+Some examples:
+
+An example link would be 
+Everything works nicely as is, but as I get started with OOP I see obvious easy entry points and inheritance paths for ""objectifying"" this system.
+
+I'm also excited about the flexibility some well-written classes will give me.
+The design pattern idea is tripping me up, though. It seems like a Factory pattern, but I'm confused about the differences between F and AF. I've read other SO questions specifically asking that question, and I've read the examples on OODesign but I feel like they're written in a different language and it's rather frustrating.
+Perhaps if someone could explain it using my own data structures it would make more sense to me?
+Sorry for the trouble.
+",4719976,"The difference between Factory and Abstract Factory is pretty simple. In the latter, the factory itself is abstract (!) and cannot be instantiated directly, but must be sub-classed.
+Per example, Factory:
+
+In Abstract Factory:
+
+In short, the Factory pattern has a default implementation in the factory class itself. The Abstract Factory requires all sub-classes to implement their own version of the factory methods.
+That's all there is to it.
+",34,5,64,12.8,5,4,3,2
+492901,8055268,Is there a common design pattern for a parent class calling several of its child classes,"For example, I have several different merchant clients who I handle transactions for.  They want different metrics for determining fraud, many of which are common.  I'd like to have something to the effect of:
+
+etc...
+I'd like to just be able to run zero to many extended Fraud classes using a command like:
+
+I don't mind solving this in a completely home grown fashion, but if it's already been figured out, I'd like to go that route.
+I'm coding in PHP, but am fine with a reference using any other language.
+",8055708,"Looks like you're looking for something like the Strategy pattern.
+You should define an interface for your  classes that accept a :
+
+Then implement each subclass:
+
+Then, create a context class that checks for each one:
+
+",3,5,64,12.8,5,4,3,2
+492901,4595964,Is there a use-case for singletons with database access in PHP?,"I access my MySQL database via PDO. I'm setting up access to the database, and my first attempt was to use the following:
+The first thing I thought of is :
+
+This is considered a bad practice. After a little search, I ended up with the Singleton pattern, which
+
+""applies to situations in which there needs to be a single instance of a class.""  
+
+According to the example in the manual, we should do this:
+
+Why do I need that relatively large class when I can do this?
+
+This last one works perfectly and I don't need to worry about  anymore. 
+How can I create a smaller singleton class, or is there a use-case for singletons that I'm missing in PHP?
+",4596148,"First, I just want to say that I don't find much uses to the Singleton pattern. Why would one want to keep a single object thorough the whole application? Especially for databases, what if I want to connect to another database server? I have to disconnect and reconnect every time...? Anyway...
+There are several drawbacks to using globals in an application (which is what the traditional use of the Singleton pattern does):
+
+Difficult to unit test
+Dependency injection issues
+Can create locking issues (multi-threaded application)
+
+Use static classes instead of a singleton instance provides some of the same drawbacks as well, because the biggest problem of singleton is the static  method.
+You can limit the number of instances a class can have without using the traditional  method:
+
+This will help on the first the points mentioned above: unit testing and dependency injection; while still making sure a single instance of the class exist in your application. You could, per example, just pass the resulting object to your models (MVC pattern) for them to use.
+",5,5,64,12.8,5,4,3,2
+492901,4147400,Why use anonymous function?,"
+Possible Duplicate:
+How do you use anonymous functions in PHP? 
+
+Why should i use an anonymous function? I mean, what's the real deal using it?
+I just don't really get this. I mean, you use function to make the code more clean or to use it more than once. But Anonymous functions just don't do neither the first nor the second.
+I googled them and i couldn't find anyone asking the same problem.
+",4147435,"It is useful especially for callbacks:
+
+",21,5,64,12.8,5,4,3,2
+492901,4285914,Is this Factory Method the good one for what I&#39;am trying to do?,"
+Here what I'am trying to achieve : 
+ - this a text file parser
+ - depending on the first chars I create the correct parser object
+ - I wish to do so using the right factory pattern
+ - could you tell me if my code below fits correctly the factory pattern ?
+ - Thank you ! :-)
+
+
+class Parser
+{
+    protected $src;
+
+    public function __construct($src)
+    {
+        $this->src = $src;
+    }   
+}
+
+class Format1Parser extends Parser
+{
+    public function Parse()
+    {
+        // Parsing format 1
+        // ...
+    }
+}
+
+class Format2Parser extends Parser
+{
+    public function Parse()
+    {
+        // Parsing format 2
+        // ...
+    }
+}
+
+class ParserFactory
+{
+    public static function GetParser($src)
+    {
+        $header = substr($src,0,7);
+        if ( $header == ""format1"" )
+        {
+            return( new Format1Parser($src) );
+        }
+        if ( $header == ""format2"" )
+        {
+            return( new Format2Parser($src) );
+        }
+        return(false);
+    }   
+}
+
+$parser = ParserFactory::GetParser( file_get_contents(""file.txt"") );
+$parser->Parse();
+
+
+",4285969,"First, I would use a suffix (Parser_Format1) instead of a prefix (Format1Parser), because IMHO it's clearer.
+As for the factory method itself, you could use dynamic instantiation:
+
+Another thing, your Parser class should be abstract and define an abstract function :
+
+Defining abstract methods within a base abstract class ensure that most errors (i.e.: a missing  method) are caught when the class is parsed (at the beginning of the program), as opposed as to when it's called (in the middle of runtime).
+",1,5,64,12.8,5,4,3,2
+270591,3408098,"If Entity Framework is meant to work with POCOs, then why the dependency on IObjectSet?","I keep hearing about EF 4.0, POCO, IObjectSet, UnitOfWork (by the way, UoW is atleast more than 17 years old when I first heard it) etc.
+So some folks talk about Repository ""pattern"". etc. There are numerous bloggers showcasing their concoction of a ""wrapper"" or repository or something similar.
+But they all require IObjectSets (or in some cases - IQueryables) to be hanging off their POCOs. Expectation seems to be that you can write queries against them.
+So if one needs IObjectSet and not just IList or some other simpler collection, why are we saying this is POCO and free from EF?
+If I want to swap EF from underneath, I need to make sure my ""other"" O/R Mapper (I know I know.. EF is not just an O/R Mapper) understands IObjectSet and be able to parse the ExpressionTrees from the queries, execute and otherwise behave similar to EF. 
+",3410301,"Your question contains a wrong statement: Correct is that POCOs do not depend on IObjectSet.
+POCOs themselves are independent from EF. Or better: They are supposed to be independent from EF. Since YOU are implementing the POCO classes you are finally responsible to make this sure. (Otherwise the term POCO would be the wrong one.)
+If you are using the standard T4 template to create POCO classes from a model description instead of writing the classes on your own the template ensures that the classes do not depend on EF - they are not derived from  and collections as members of a class are generated with  by this template, not with IObjectSet.
+Repository pattern is another question. The POCO T4 template does not create a Repository as an abstract interface to act on a database with POCOs. It creates a derived ObjectContext which is rather an EF specific implementation of a possible repository interface (or at least helps to easily implement a possible repository interface).
+If you want to have a repository interface which doesn't depend on EF or LINQ you have to define it this way. Nothing forces you to use IObjectSet or IQueryable in that interface. Perhaps the examples of implementing the Repository pattern you saw didn't intend to be independent from Entity Framework or LINQ.
+An example:
+Suppose, in your business layer you need a list of all products of a given category returned from the persistance layer. What would this layer expose to fulfill the request?
+If you only have databases in mind which offer a LINQ provider you might design the repository interface like so:
+
+A concrete implementation of this repository based on EF would simply return an  from the ObjectContext which the T4 template did create.
+And your business layer runs a query this way:
+
+But if you want to be more open what kind of persistance storage you like to support it might be better to design the repository independent from IQueryable. The consequence could be that your abstract repository interface needs more specific methods to answer requests from the business layer, for instance you need now:
+
+and the business layer does this:
+
+A concrete implementation of this Repository using EF (or another data framework supporting LINQ) could still leverage a LINQ query like the business layer did in the first example. But other implementations could work in another way (say: you have a ""database"" which stores products in one text file per category. Then the implementation for that interface method would read one specific file from disk. Or your repository implementation asks a webservice for the data, and so on...)
+Key point is: If you are using POCO classes you are open for all those kinds of repositories. EF with POCO support doesn't force you to build repository interfaces based on IQueryable or even IObjectSet. It finally depends on what kind of persistance layers you have in mind. The more different they are the more specific methods you might need to support in your repository interface and the more work you'll have to implement those methods. Using IQueryable is a comfortable compromise which allows to define a simple repository interface while enabling simple implementations by EF but also other databases with LINQ provider. I think that's the only reason why you see examples of repository pattern implementations with IQueryable so often. It's not an inherent restriction imposed by EF with POCOs.
+(That's how I think about it, not being an expert in design patterns, so heavy attacks and corrections in the comments are welcome.)
+",0,5,16,3.2,4,2,1,2
+270591,4421295,Choose ASP.NET Design Pattern,"I saw AsP.NET Design Patterns Here 
+ how can i understand which Design Pattern is Appropriate for our Projects?
+most of our projects are Office Automation Projects.
+I Had Never Used Any ASP.NET Design pattern In my projects.
+just i used microsoft nettiers
+Thanks.
+",4430797,"The design patterns to be found on your linked page (i.e. Factory pattern, Observer pattern, Decorator pattern, etc.) have a very general purpose and are helpful to design specific tasks in any kind of application framework and programming language. Usually a large application won't follow only one of them but will contain a mix of several of these pattern. They are not specific to ASP.NET.
+Perhaps you are looking more for a design pattern which helps to create a clear and maintainable structure of an application as a whole. For  a widely used application pattern is the  or  pattern which helps you to seperate concerns (for instance separate business logic from UI/code-behind logic) and improves automated testability for Webforms applications.
+You can read more about the MVP pattern in relation to ASP.NET Webforms here (a brief introduction which also explains the various flavors of the pattern (like  and )) and more in detail here. (Last but not least combining the terms ""ASP.NET"", ""Webforms"", ""MVP"" or similar in your favourite search engine will reveal a lot more resources.)
+Edit: Just to add one link more I just discovered: http://webformsmvp.com seems to be a website which focusses exclusively on the MVP pattern in ASP.NET Webforms.
+",2,5,16,3.2,4,2,1,2
+270591,5660303,"Save One, Save All in Entity Framework","I'm still learning about Unit of Work patterns, repository patterns, etc. 
+My app:
+
+I have a list of entities, say customers in a listview
+When I select a customer a detail form shows, where their details can be edited
+
+I'm trying to understand the standard MVVM/Entity Framework way of accomplishing the following:
+
+When the user edits a customer it shows as ""changed"" (but not saved)
+The user can chose to either save the current customer, or save all the changed customers
+The Save or Save All commands/buttons are disabled if that option is not available (the current customer is unchanged, or all customers are unchanged)
+
+Seems simple enough? But I have no idea how to approach this using MVVM/EF. Do I use UoW, do I detach objects and re-attach to the context so I can save them one at a time? How do I detect if an object is changed or unchanged?
+Help! Thanks!
+",5665096,"I throw in a few remarks:
+The critical point in your requirements is in my opinion the option to save either one single customer or all changed customers. You need to take into account that Entity Framework doesn't have a method to save changes of a single or a few selected objects in the context. You can only save the changes of the whole Unit of Work (which is the  or  in EF) by calling .
+This leads to the conclusion that you cannot use the list of all customers and the customer detail form in one single Unit of Work (= EF context) which holds all customers as attached entities. If you would do this you could provide a function/button to save all changes but not an option to save only the current customer in the form.
+So, I would either think about if you really need those functions or I would work with the entities in a detached state. This would mean that you have to load the customer list from the database and dispose the context after that. When you save the changes - and now it doesn't matter if all changes or only changes of a single customer - you can create a new context, pull the original entity/entities from the database and update with the changed properties.
+But working with either attached or detached entities - or either having one living EF context per view/form or creating only one short-living context per CRUD operation - is an important design decision in my opinion. Generally the possibility to have your entities attached to a context during the lifetime of a view/form exists to make your life as programmer easier because it offers you features like lazy loading and change tracking out of the box. So you might think twice if you want to give this up.
+To recognize if a customer object has been changed or not the EF context could be helpful because it tracks the state of an object. You could for instance query the ObjectStateManager for a customer and check if it is in a ""Changed"" state. But to have this option you would need to work with attached entities as explained above. Since you cannot save (or also cancel) single object changes it is questionable if it would make sense at all to show the user that customer 1 and customer 3 has changed. (I would probably only show ""some customers have changed"".)
+If you are working with detached entities you have to manage by hand which customers have changed or not by implementing some kind of ""dirty flag"" logic. Here is a thread about this:
+Different ways to implement 'dirty'-flag functionality
+",4,5,16,3.2,4,2,1,2
+270591,7931824,MVC tutorial/walkthrough that is meant for people familiar MVVM?,"I'm used to working in WPF with the MVVM design pattern, but I've recently been asked to do something in ASP.Net. I'd like to try using MVC because I saw it referenced a lot when learning MVVM, however I don't know anything about it.
+I can find plenty of sites that are meant to explain MVVM to someone who is familiar with MVC,  however I cannot find a good one that explains MVC to someone who is used to MVVM. There are sites that explain MVC on it's own, but I'm having a hard time understanding them because my mind keeps trying to apply MVVM logic.
+So, are there any good sites that can explain MVC in terms that someone used to MVVM can understand? Or can someone explain it to me here?
+",8013385,"When you come from MVVM pattern and start with MVC pattern (especially ASP.NET MVC) I would suggest to think of the ""MVC"" pattern better as the ""VMVC"" because the ""M"" in MVC is not the Model meant by the ""M"" in MVVM. It actually corresponds to the ViewModel. I don't know if that represents the general definition of MVC but it is true and the most used and best practice when you work with ASP.NET MVC (although you see every now and then examples or questions here on SO where domain entities are used in a view (which is sometimes exactly the reason for the problem described in the question)).
+The first thing I usually do when I create a ASP.NET MVC project from one of the Visual Studio templates is to rename the created folder ""Model"" into ""ViewModel"". If you take a look what the template code does with those ""Models"" you see that they are directly used for the views, that they have data annotations for input validation, for display formats and perhaps field naming on the view. These annotations are partially used directly by the HTML helpers to produce the HTML and don't represent domain or business logic. In other words: they are ViewModels for an Razor/HTML view in the same sense as you use ViewModels in MVVM for your XAML views in WPF/Silverlight/Phone7. 
+The domain ""Model"" is actually not part of the MVC pattern as it is a part in the MVVM pattern. So, the abbreviations are somewhat misleading when you compare MVVM with MVC. As a very simplified ""translation table"" one could say:
+
+I'm not sure about the corresponding thing of a controller in MVVM. In MVC the controller is usually the module which translates domain objects into ViewModels and then into views (and vice versa) - schematically:
+
+Which part in MVVM has this responsibility? I am not sure. I have seen designs where the ViewModel holds some reference to a repository, pulls out the Model (Domain Model) to fill its own properties and writes back into the repository through ICommand handlers. That would mean that ViewModels in MVVM also have the responsibility to be a ""controller"" while ViewModels in MVC are much simpler: They are more or less only property bags with metadata to provide and format data for a view.
+As a final note: Personally I found the MVVM pattern with WPF much more difficult to master than the MVC pattern. ASP.NET MVC is designed from the ground to support MVC pattern-friendly development and there is not need (or even not the possibilty) to leave this way. This is not the case for WPF. The original design was built with views and code-behind files in mind, not with the MVVM pattern. I found often situations where it was very difficult to bind view elements or attributes to a ViewModel and handling this in code-behing files was much easier, thereby violating MVVM principles a bit.
+I would think that you won't have any problems to get into MVC when you have experience with the MVVM pattern.
+",5,5,16,3.2,4,2,1,2
+270591,5953441,Repository pattern: Implementation and lazy loading of model relationships,"I have an application which deals with products and product categories. For each of these I have models defined using POCO.
+
+The application uses a repository to access these models
+
+In the Product class, the property named Category of type ProductCategory should be loaded only when it is needed/accessed (lazy-loading). I want my models to remain POCO and contain only the structure of the model.
+Am I taking the right approach ?
+Should I have only the ID of the category in the Product class and use a separate repository for product categories to load the category ?
+Implementing lazy-loading and relationships
+For now my implementation of the repository interface returns an object of a type which extends the Product type and has support for lazy-loading through the repository instance.
+Who should be responsible for loading the product category ?
+I'm interested in how the product and category repositories should interact to achieve the lazy-loading ? Should they reference each other or should I have a main repository with the two sub repositories and pass that to my extended model types ?
+What approach would you take ? (any suggestions and criticism is welcomed)
+
+I should note that I want the application to be extensible and all the interfaces for the repositories and the models themselves will be in a separate asembly. This means that the extender will not have direct access to the model class definition.
+",5955336,"A few remarks and my opinions:
+1)
+
+Should I have only the ID of the
+  category in the Product class and use
+  a separate repository for product
+  categories to load the category ?
+
+No. You are using an ORM (at least I assume you do) to be able to model relationships by references between class instances and not by IDs you are using then to query in a relational fashion. Taking your idea to the last consequence would mean that you remove all navigation properties at all from the model classes and have only scalar properties and some of them act as keys between objects. That's only the ""R"" in ORM.
+2)
+
+For now my implementation of the
+  repository interface returns an object
+  of a type which extends the Product
+  type and has support for lazy-loading
+  through the repository instance.
+
+Not sure what this means exactly. (I would like to see a code-snippet how you do that.) But my guess is that in your derived  class you inject somehow a reference to the repository, like so:
+
+Well, it's obviously a problem now to load the categories since  doesn't have methods to access them.
+3)
+
+I'm interested in how the product and
+  category repositories should interact
+  to achieve the lazy-loading ? Should
+  they reference each other or should I
+  have a main repository with the two
+  sub repositories and pass that to my
+  extended model types ?
+
+Your ProductRepository and CategoryRepository look like instances of a generic repository which is only responsible for a single entity type (in EF 4.1 this would be similar to  where  is  or  respectively).
+I would avoid to have references between those repositories as this may end up in a hell of complex repo-references whenever you add new entities or navigation properties.
+I see two other options:
+
+(Basically what you already mentioned) Having a repository which is responsible for  and  together. You could still have your generic repositories but I would consider them more as internal helper repos and would only use them as private members inside of the main repository. This way you can have a group of repositories, each of them is responsible for some closely related entities.
+Introduce a  which is able to create all of your generic repositories (again in EF 4.1 this would be something like the factory method  where  is the unit of work) and then inject this Unit of Work into your derived instances:
+
+
+I would prefer the second option because in the first option you may end up in huge repositories to support loading of all possible relationships. Think of: Order has OrderItems, OrderItem has Product, Product has Category, Order has Customer, Customer has list of Addresses, Address has list of Contact Persons and so on and so forth...
+4) (because you were also asking for criticism)
+Are you writing your own ORM or are your writing an application? Your design goes into a direction which may become very complex and you are reinventing the wheel in my opinion. If you planning to use EF or NHibernate (or other ORM's) then you are creating functions which are already available out of the box, you only put abstractions on top of it which add no value. Lazy loading through dynamic proxies happens transparently in the sense that you never work explicitely with those proxies in your code, you always work with your POCO entities. They are invisible and exist only at runtime. Why do you want to develop your own lazy loading infrastructure?
+",5,5,16,3.2,4,2,1,2
+135978,3410984,JavaScript Namespace,"I want to create a global namespace for my application and in that namespace I want other namespaces:
+E.g.
+
+I also want to place them in seperate files:
+
+Ajax.js
+RetrieveContent.js
+
+However I have tried using this method, however it won't work because the same variable name is being used for the namespace in 2 seperate places. Can anyone offer an alternative?
+Thanks.
+",3411824,"There are several libraries that already offer this sort of functionality if you want to use or examine a pre-baked (that is, a tested) solution.  
+
+YUI.attribute and YUI.base 
+dojo.mixin
+underscore.extend
+jQuery.extend
+goog.provide and goog.object.extend
+
+The simplest and most bug free one to get going with is probably , with the  argument set to true. (The reason I say it is bug free is not because I think that  suffers from less bugs than any of the other libraries -- but because it offers a clear option to deep copy attributes from the sender to the receiver -- which most of the other libraries explicitly do not provide.  This will prevent many hard-to-diagnose bugs from cropping up in your program later because you used a shallow-copy  and now have functions executing in contexts you weren't expecting them to be executing in.  (If however you are cognizant of how you will be extending your base library while designing your methods, this should not be a problem.)
+",3,7,31,4.43,3,3,2,1
+135978,6931253,Is this a good way to wrap up Javascript variables?,"I was looking to this post Wrap up javascript global variables, 
+
+Is this a good way of writing JavaScript variables?
+",6931624,"Having all of your common global variables wrapped up in a namespace is the start of a good idea.  However, the problem the author is trying to solve is a much larger one - that of proper encapsulation.  There are several different ways to approach this, that can be combined into many different patterns.
+Each of these patterns enables or disables things:
+
+Variable shadowing: Can I update a particular variable in a particular context without updating the variable ""globally"" (i.e. throughout all the scopes in which that variable is accessible)?
+Globally accessible: Can I reach the value of that variable from any other scope in the code?
+
+First is the containing-object pattern already mentioned here:
+
+
+Variable shadowing: No. If you update  in one place it is updated in every scope in which  is accessible.
+Globally accessible: Yes. In every scope that has access to the global object (which is every scope, with the solitary exception (I believe) of code loaded by a module loader like node.js or Require.js) I can reach .
+
+The advantage to this pattern is that you can easily reach the variable from almost anywhere in your code.  The disadvantage to this pattern is that you can easily update this variable from almost anywhere in your code, but you cannot count on rollback anywhere.
+The second pattern is the scope pattern, which makes use of :
+
+
+Variable shadowing: Yes. 
+Globally accessible: No. You need to manually pass in references to variables from the outer scope to be certain of having access to them (If the variables have been defined on the  they will always be globally accessible, but if they have been defined in an intermediate scope, they will need to be manually passed to the innermost scope).
+
+",2,7,31,4.43,3,3,2,1
+135978,37825006,"Mixin Pattern using underscore, _.extend keyword","I want to make an example code based on 'Mixin Pattern'.
+I have a code like below.
+
+If I run this code, there comes an error saying 'testA.c is not a function'.
+Judging by some example codes which I studied, This should work.
+Can you please let me know about the reason this code doesn't work as detail as possible?
+",37825165,"Your problem is that you copy the properties of  rather than the properties of  (which is where the method  is actually defined).  Simply change:
+
+to:
+
+and everything will work as expected.
+",2,7,31,4.43,3,3,2,1
+135978,25043838,"Optional Design Pattern, Advantages","So, it's pretty well known that the infamous  is the most common exception in software products. I've been reading some articles, and found myself with the Optional approach.
+Its aim is to create some kind of encapsulation around a nullable value
+
+Afterwards, the now optional value can be returned like this:
+
+And handled like this:
+
+I don't see any improvement, just shifted complexity.
+The programmer must remember to check if a value , in the same way he must remember to check if a .
+And if he forgets, he would get a  on both approaches.
+What am I missing? What advantages (if any) does the Optional pattern provide over something like  and the null coalescing operator?
+",25046733,"Free your mind
+If you think of  as  by a different name then you are absolutely correct -   is simply  for reference types.
+The  pattern makes more sense if you view it as a monad or as a specialized collection that contain either one or zero values.
+ as a collection
+Consider a simple  loop with a list that cannot be :
+
+If you pass an empty list to , nothing happens:
+
+If you pass a list with one or more elements in it, work happens:
+
+Let's alias the empty list to  and the list with one entry in it to :
+
+We can pass these variables to  and we get the same behavior as before:
+
+Of course, we can also use LINQ extension methods:
+
+Interesting side note: LINQ is monadic.
+Wait, what just happened?
+By wrapping the value that we want inside a list we were suddenly able to only apply an operation to the value if we actually had a value in the first place!
+Extending 
+With that consideration in mind, let's add a few methods to  to let us work with it as if it were a collection (alternately, we could make it a specialized version of  that only allows one entry):
+
+Then your code becomes:
+
+Not much savings there, right?  And two more anonymous functions - so why would we do this?  Because, just like LINQ, it enables us to set up a chain of behavior that only executes as long as we have the input that we need.  For example:
+
+Each of these actions (, , ) is expensive - but they will only happen if we have a customer to begin with!
+It gets better though - after some study we realize that we cannot always predict customer behavior.  So we change the signature of  to return an  and change our second  call in the chain to :
+
+which is defined as:
+
+This starts to look a lot like LINQ ( -> , for example).
+Further possible refinements
+In order to get more utility out of  we should really make it implement .  Additionally, we can take advantage of polymorphism and create two sub-types of ,  and  to represent the full list and the empty list case.  Then our methods can drop the  checks, making them easier to read.
+TL;DR
+The advantages of LINQ for expensive operations are obvious:
+
+, when viewed as a collection of one or zero values provides a similar benefit (and there's no reason it couldn't implement  so that LINQ methods would work on it as well):
+
+Further suggested reading
+
+Option (F#)
+When  is not enough (C#)
+The neophytes guide to Scala Part 5: The Option type
+The Marvel of Monads (C#)
+Eric Lippert's series on LINQ and monads
+
+",8,7,31,4.43,3,3,2,1
+135978,2300302,Is there a good jQuery pattern for managing initialization?,"Basically I want to do something like this:
+
+The reason is so I can minify everything into one js file, thus reducing the number of http requests. This solution is definitely not elegant, since I need to add another 'else if' statement whenever I add new pages. I could use:
+
+But eval is evil and I don't know the performance implications using this method.
+",2300361,"Instead of using  why not make use of the other way to call javascript objects ?
+Assuming that all your objects are global in scope, why not try:
+
+",4,7,31,4.43,3,3,2,1
+135978,12463513,How to handle these async functions (design-pattern?),"I got an application which needs to execute some booting/startup like:
+
+ajax
+dynamic requirejs 
+routing, set up something else
+
+before able to run.
+I now got difficulties organizing these tasks in a solid way together.
+Especially the async behavior is giving me headache. 
+Currently I am using events to share fetched results and watch the state of the application. Unfortunately this resulted in enological, inconvenient crap.
+Then I tried using some promises libraries like q, jquery.defered but they don't really match my problem.
+This is a simplified version of the code:
+
+Also viewable at:
+http://jsfiddle.net/uzJrs/3/
+I hope this describes my problem:
+There are three totally different, async tasks. When they all a ready their results have to get merged and somehow passed to another object.
+Events make this workable but far a way from understandable and promises also don't really make me happy. Isn't there another helpful design pattern?
+",12463771,"It sounds like the majority of your functionality is actually synchronous as long as the dependencies are resolved (i.e.  and  don't do anything asynchronous they simply might be loaded asynchronously.  If you are using require.js have you tried simply using its functionality to make the  calls synchronous from your code's perspective by using ?  Then you only have to worry about the call which has to be asynchronous ().
+
+",1,7,31,4.43,3,3,2,1
+135978,7256889,"Adding REST behavior to a class with flask, case for blueprints?","I am dealing with a python application that consists of multiple distributed lightweight components that communicate using RabbitMQ & Kombu.
+A component listens on two queues and can receive multiple message types on each queue.  Subclasses can override how each message type is processed by registering custom handlers.
+All this works fine.
+I now have the added requirement that each component must have a basic REST/HTML interface.  The idea being you point your browser at the running component and get realtime information on what it is currently doing (what messages it is processing, cpu usage, state info, log, etc.)
+It needs to be lightweight, so after some research I have settled on Flask (but am open to suggestions).  In pseudocode this means taking:
+
+and adding a number of view methods:
+
+However, bolting a web UI onto a class like this breaks SOLID principles and brings problems with inheritance (a subclass may want to display more/less information). Decorators are not inherited so every view method would need to be explicitly overridden and redecorated.  Maybe using a mixin + reflection could work somehow but it feels hackish.  
+Instead, using composition could work: put the web stuff in a separate class that delegates the url routes to a fixed, predefined set of polymorphic methods on the nested component.
+This way components remain unaware of Flask at the cost of some loss in flexibility (the set of available methods is fixed).
+I have now discovered Flask blueprints and Application Dispatching and it looks like they could bring a better, more extensible solution.  However, I have yet to wrap my head around them.
+I feel like I am missing a design pattern here and hopefully somebody with more flask-fu or experience with this type of problem can comment.
+",7260898,"Something else was quietly introduced in Flask 0.7 that might be of interest to you - Pluggable Views.  These are class based rather than function based endpoints - so you can use the  method to manage your state transitions (only overriding it when needed).  
+The benefit of doing it this way, as opposed to using Application Dispatching, is that you get  support all across your application (as opposed to having to hard code in URLs that cross application boundaries.)  You'll have to decide if this is something that is likely to be an issue for your application.
+In pseudo-code:
+
+
+
+You can add blueprints to the mix if you have a series of components that are all logically connected together and you don't want to have to remember to put  in front of each one's  call.  But if you just have a series of components that are mostly independent of each other, this is the pattern I'd use*.
+*. On the other hand, if they need to be isolated from each other I'd use the Application Dispatch pattern recommended in the docs.
+",11,7,31,4.43,3,3,2,1
+215966,3419359,Factory pattern appropriate?,"Well,
+I have a problem (ok, no real problem, but I wanna try out something new) with creating objects. Actually I have some orders, which contains a list of orderitems.
+These orderitems are used and so spreaded in the whole application, and I need a way to create them. The main problem is, I want to be able to create these objects in many different ways.
+Actually I do this in the class constructor and check if the argument which is given.
+(I'm using php, so there is no overloading support from the language as you surely know :))
+A simple and quick Example
+
+Anyway, if I want to create my object by giving another type of parameter, lets say a xml-document encapsulated in a string I need to put all this stuff in my constructor.
+If the process for creating an object is more complicated, I eventually need to create a seperate method for each type,  I want to initiate. But this method is only called when this special type is created. (I think you got the problem :))
+Another problem comes to mind, if I need more parameters in the constructor to create a concrete object, I have modify all my code, cause the contructor changed. (Ok, I can give him more and more parameters and work with default values, but that is not what I really want).
+So my Question is, which pattern fits this problem  to solve my creation of a concrete object. I thought about creating a factory for each way I want to create the concrete object. But I'm not sure if this is a common solution to solve such a problem.
+",3419478,"IF its only the signature of the constructor changing i would do it like so (a la the Zend Framework universal constructor):
+
+And this essntially means all your constructor parameters are array elements with named keys, and anything you want used in this array during initialization you create a setter for and then its automatically called. The down side is the lack of effective hinting in IDEs.
+On the otherhand if you want to have specific constructors then i might go with a factory but still use much the same approach:
+
+Of course you could alternatively use PHP's reflection to determine how to call the constructor instead of just injecting an arbitrary array argument.
+",2,5,6,1.2,1,1,0,0
+215966,2059923,PHP Design Pattern,"I have a class that performs database operations and returns results (array, true, false). And I have an another class that creates JSON string by using this class in its constructor.
+Can we say this class is an Adapter? Or simply wrapper or ...
+
+Thanks
+",2060124,"Id say its more of Decorator... http://en.wikipedia.org/wiki/Decorator_pattern
+",1,5,6,1.2,1,1,0,0
+215966,11373029,Design: Selling content on 3rd party site,"Just need some advice as I'm new to this territory and not sure what the best approach is.
+I have a site where we sell online courses like udemy or appsumo or lynda. People pay on the site and can access/stream videos and quizzes online.
+Now I'm partnering with a 3rd party site which will sell our courses but we are custom making courses for this site and these courses will not be available on my site for my users. Similarly the courses available on my site should not visible to users who come from this 3rd party site.
+The idea is - on the 3rd party site - the user is going to view the course details, register and pay online after which the user will be redirected to my site. The user should not get any indication that he has come to my site - the look and feel should be similar to the 3rd party site and the URL will be masked as well. It goes without saying that while he is on my site - he should not be able to access any of my current pages like ""view courses"", ""about us"" ""contact us"" etc etc
+Basically the idea is the user will never know about my site. Even next time when he wants to access the course - he will login on the 3rd party site and get redirected here.
+So the tech team on the other end is suggesting that I should make a new build with just the main course pages and a new layout and deploy it on a separate server but pointing to the same back end database.
+The idea of maintaining two versions of the same site doesn't seem right to me. 
+Need some advice from experts who've been there and done that.
+Thanks
+",11373073,"My first thought would be that you should make an API for them to access the content instead of redirecting. This way you are only responsible for serving the content, and the integration is totally on them. Furthermore, if similar partnerships with other parties arise in the future you are already set up for that.
+",0,5,6,1.2,1,1,0,0
+215966,2901823,How to understand other people&#39;s CSS architectures?,"I am reasonably good with CSS.  However, when working with someone else's CSS, it's difficult for me to see the ""bigger picture"" in their architecture (but i have no problem when working with a CSS sheet I wrote myself).  For example, I have no problems using Firebug to isolate and fix cross browser compatibility issues, or fixing a floating issue, or changing the height on a particular element.  But if I'm asked to do something drastic such as, ""I want the right sidebars of pages A, B, C and D to have a red border.  I want the right side bars of  pages E, F and G to have a blue border if and only if the user mouses over"", then it takes me time a long time to map out all the CSS inheritance rules to see the ""bigger picture"".
+For some reason, I don't encounter the same difficulty with backend code.  After a quick debriefing of how a feature works, and a quick inspection of the controller and model code, I will feel comfortable with the architecture.  I will think, ""it's reasonable to assume that there will be an Employee class that inherits from the Person Class that's used by a Department controller"". If I discover inconvenient details that aren't consistent with overall architectural style, I am confident that I can hammer things back in place.
+With someone else's CSS work, it's much harder for me to see the ""relationships"" between different classes, and when and how the classes are used.  When there are many inheritance rules, I feel overwhelmed.
+I'm having trouble articulating my question and issues...  All I want to know is, why is it so much harder for me to see the bigger picture in someone else's CSS architecture than compared to someone else's business logic layer?
+**Does it have any thing to do with CSS being a relatively new technology, and there aren't many popular design patterns?
+",2901864,"I think a lot of times people just hack the css together without a concept of the overall picture. A lot of times they just add things on as they are laying things out with little regard to any ""conventions"" they established that aren't directly fresh in their mind leading to all kinds of naming redundancies and discrepancies. 
+I don't think that its so much that CSS is new as it is that CSS is often the realm of the designers and often times they dont think architecturally when designing something - everything is somewhat adhoc. 
+I know when I'm a lead i establish a formal set of conventions for class naming and organization as one of the first things i do and then hammer it in to the front end underlings :-)
+",1,5,6,1.2,1,1,0,0
+215966,4321706,Name for the Strings that Define Magento Class Names,"Magento uses a factory pattern for instantiating objects from classes
+
+These strings are expanded into classnames, and the System can be configured to replace the default values.
+What are, or should, these strings be called?  I've been abusing the term URI (sometimes tempering the abuse with the phrase ""URI-like""), but that's not really right.  ""Class Name"" doesn't seem right either, as it could easily cause confusion (Are you talking about the factory class name, or the actual PHP class name?)
+Anyone have any stabs at authority on this?
+",4321792,"I would say a ""class path"" but that might confuse some who have worked in languages where that has a more formal meaning and an implementation within the language/interpreter/compiler.
+",2,5,6,1.2,1,1,0,0
+11225,3420115,How to model subclasses with different types of the same property in a language without generics?,"I have 3 types of objects: Red, Green, and Blue. I have 3 kinds of devices that handle each type of object, respectively. No device can handle more than 1 type of object. Each ""object handler"" has a reference to an object which it is currently handling.
+In Java I'd do something like this:
+
+Is there any non-horrible way to do this in a language without generics? I don't want to define the  property separately on each subclass since then I lose the advantage of inheritance.
+(If it helps, the language I'm trying to do this in is actionscript 3.)
+",3421837,"Have a common base class for the red, green and blue objects. Pass that to the handler. Have each handler assert that it is receiving the correct descendant class of the base class.
+In Delphi:
+
+",0,10,24,2.4,2,3,1,1
+11225,11883474,Extend delphi class hierarchy,"I am wondering how to extend a class hierarchy with additional capabilities, following this requisites: 
+1) I cannot touch the original hierarchy
+2) I need to develop the new features into a different unit
+Take for example the following class hierarchy in uClasses.pas unit:
+
+I want to attach other functionality to the classes, for example saving itself to text (it is just an example). So I imagined the following unit uClasses_Text.pas: 
+
+How can I refer to ""base"" implementation of SaveToText from within TDerivedClass_Text.SaveToText? Maybe handling the interface in some way?
+Or, 
+does exists a better and cleaner approach to this case?
+Thanks,
+",11891920,"Honesty is overrated according to ... (Can't remember the song). I think many of us are overrating inheritance and are often too quick in solving issues with inheritance rather than composition or delegation.
+I really question the desire to add a SaveToFile method to each and every class that you want to be able to persist to file.
+In my view, classes should be ignorant of responsibilities that are not the reason for their existence. Persistence is one such responsibility, printing another. A printing class should be responsible for printing. Of course you woulnd't want a printing class to be a hornets nets of if statements to deal with every perceivable class you want to print. So you define a Printer base class and extend it with PeoplePrinter, LocationPrinter and WhateverPrinter descendants. Each of which can deal with an entire class hierarchy.
+If you are now thinking Decorator pattern, good, well spotted.
+The idea is that you do not create descendants for an existing hierarchy, but you create classes and possibly class hierarchies for specific responsibilities. When you want to save an instance of an existing class, instead of calling , you would instantiate a  and pass it an instance of the class to be saved.
+A very naive implementation could look like the following.
+
+I don't much like this. It's brittle. We can do better.
+There are many ways to make the above code much more flexible and/or provide for polymorphistic execution. For example TSaver could have a dictionary of anonymous methods tied to classes of TBaseClass. TSaver.SaveToText could then get a TBaseClass argument and be implemented to execute each of the anonymous methods for the class of the instance passed into it if it inherits from the class tied to that anonymous method.
+
+This frees you from inheritance hierarchies, but if you want polymorphistic execution, this could be changed to a dictionary tying specific TBaseClass descendants to a matching hierarchy of ""AddInfo"" descendants, where each AddInfo descendant adds its own information:
+
+Which by the way looks very much like the class helper method proposed elsewhere but without the limitation of having only one class helper active at any one time. So you could have TSaver, TPrinter, TMailer and whatever else you would like to be able to do with TBaseClass that isn't its prime responsibility.
+Oh, by the way, the above use of absolute is one of the very few use case for absolute that I can stand. It is convenient short hand for a hard cast that is made safe by the early exit constraint which itself is also one of the few use cases for early exits that I can stand :-)
+",1,10,24,2.4,2,3,1,1
+11225,5489440,implementing Database-functionality objects in an N-Tier architecture?,"I'm adding functionality to our website which performs long-running processes asynchronously using MSMQ. Doing this ansynch, however means we need to notify users when their requests are completed. Using the command pattern, I created an interface* called INotify and composed that into the message class, so the message processing class can simply call GiveNotice() on the message's INotify object. The first implementation, EmailNotify, was more difficult than expected, as I was surprised to discover MailMessage isn't serializable, but got it going.
+Now I'm working on a new concrete notifier, DBNotify, which will call a SP of some sort and update a status in the main transactional database. I'm tripped up in that I would like to reuse the DAL architecture we've already created, but INotify is a member of the Model project, which is more fundamental than the DAL.
+Our hierarchy looks like this:
+Common > Model > DAL > BAL
+Here's more detail about the tiers. Bear in mind, I inherited this from :
+Common is responsible for all ""utility"" functions which are used many places in the application, things like accessing configuration settings, parsing strings, non-business related functionality.
+Model are business objects, what some folks call data transfer objects, collections of getters and setters. I've added some ""smarts"" at this layer, but only business rules internal to that object, such as ""An item's name must begin with an alphanumeric character.""
+DAL is the data access layer, in theory, all that happens here is  model objects are moved into and out of the database. 
+BAL is the Business layer; in theory, business rules that govern the interaction of objects are enforced (i.e. ""A form must have at least two items."").
+So the INotify interface is defined an abstraction to allow the method of notification to vary independently (i.e. email, TXT, twitter, etc). It's fundamental to the system, so I have created it at the Model tier, which is independent of the DAL tier. However, I am creating a new concrete implementation of INotify whose notification method is to call a SP in a database.
+Has anyone else dealt with a business object whose purpose is to interact with a database, and how do you situate that in your N-tier architecture?
+Before you tell me to use Linq to Sql, great thanks. This is not a technical question (how do I do this), it's a design question (how should I do this).
+I think there is a StackExchange site more focused on these sorts of language-independant design questions, so I'm going to copy this there.
+",5509906,"Maybe not really an answer to your question, but something to think about nonetheless.
+I am at odds with where you put the data access in your component hierarchy. I would not put it between two functional domain layers. Not even ""above"" the single domain model classes. Data access, or persistency, is not a concern for any domain class. It should only be something that can be done to them, not something they do.
+Even though I started out coding things like  and  I have now come to the conclusion that it is not the Client that decides it needs to be saved, but user interactions that dictate when a domain instance's data is needed and therefore should be loaded, and when an Client's data should be persisted, if at all. I am therefore now a proponent of coding (in the GUI, more specifically the controller's in the GUI) things like  and . It is then up to the Data Access layer to figure out how to do that. It could use reflection in C#, or the new RTTI in Delphi to iterate over all the Client's properties so it can send them to a database.
+While layering is a very good concept to separate concerns and keep you from putting stuff all over the place by simply adhering to ""you can call down but not up"", it does not help as much when addressing things like logging, exception handling, notifications and all those other interesting cross cutting concerns that every other component/layer needs.
+In addition, the Common layer, as it is a utility layer should really be accessible to all other layers.
+To put it all in a picture (where I have kept the distinction you make between simple domain classes, your model, and cross class business rules, your BAL):
+
+The INotify implementation that calls into the database is currently in the model, which in the picture above, does not call into the data access layer itself, it is only called, or rather interrogated, by the data access layer.
+The question really is whether INotify should be in the ""model"", a part of the domain layer, or whether it should be a Common interface and there should be a separate ""Notification"" layer/component that is accessible from the domain and the GUI. This new component could not only concern itself with notifications, but many other cross cutting concerns, for example logging. It  has access to the common (of course) and data access components and to the GUI in at least in some sort of call back fashion.
+In the picture below I have tried to visualize this, but I am not much good at visualization and always have problems with those pesky cross cutters. Thats why there are no call-arrows from the domain layer to the cross cutting concerns, though of course the domain layer should be able to access for example a ""Logger"" interface. Maybe I am trying to hard to distinguish between the common and the cross cutting components and an argument could be made to put these together, and visualize them as separate blocks within a ""Utility"" layer/component.
+
+",3,10,24,2.4,2,3,1,1
+11225,5840219,Why should we place interfaces with classes that use them rather than those that implement them?,"I was going through an article by Robert C. Martin and at one place he gave a example like this:  
+The first image shows that there's a cyclic dependency between the two packages. To remove this dependency a new interface is added in the second image. B implements the interface and Y uses it. And Martin makes the following point:  
+
+Interfaces are very often included in the package that uses them, rather than in
+  the package that implements them.
+
+My question is, why should we arrange interfaces this way? What is the reasoning behind packaging interfaces this way? According to Common Closure Principle classes that change together should stay together. Is an interface closer to its implementer or its user, in terms of change???
+
+",5844125,"Technically, the user is no closer to the interface than the implementor. In terms of change both will need to change when the interface changes.
+However, why would the interface change?
+The user calls to an interface so it can be independent of whatever implementor is available. Therefore the definition of the interface is dictated by the needs of the user.
+As the user dictates the definition of the interface, there is no point changing the interface if the user doesn't need it. An implementor requiring a change to the interface to accommodate the implementation should send up red flags. Why does it need more or different information from the user? What use is that to the user?
+Also, the implementor ""merely"" depends on the interface in as much as it needs to provide implementations for each of the methods in the interface. But it is free to provide empty stubs, in essence delivering a NOP to its clients.
+So, the user's needs drive changes to the interface and changes to the interface drive changes to the implementor(s). As such the user is functionally much closer to the interface than the implementor. Which makes a good case to declare the interface with the user and not the implementor.
+",9,10,24,2.4,2,3,1,1
+11225,4055313,Using MS Access database as a file format for desktop application needing open / save type functionality,"This is probably a pretty novice design question.  I'm trying to work my way through a number of requirements and give the users the experience they're looking for...
+I've written a tool that does big calcluation-type things.  It currently consists of a class library and command line tool (separate .NET projects.) We're using an Access database format as the file type because it can keep all the various tables together in one file.  A few other items about the application:
+- There are not many users.  There are no concerns with scalability.
+- There are not great concerns with updates.
+- Desktop is desired.  Not web.
+- Using VB and .NET 3.5 SP1
+I now need to develop a GUI front end that will allow typical File/Open and File/Save type operations.
+Users expect that they can open a file, edit it some, then either choose to save it or close it unsaved -- without any changes being written back to the file.  Saving it would obviously save all changes affecting all tables back to the file.
+Does it then make sense to use a temp file for something like a proxy then? To, when a user ""opens"" a file, copy the source Access file to a local temp file and then use that for the editing session? Then, if the user ""saves"", copy the local temp file back to the source path? 
+Is that question clear? Is the design horrid??? Any comments or suggestions?
+Update: [tagged with ms-access tag too] Also, I omitted the fact that users would expect typical File / Save As functionality too.  I think the design I've put in question in this post is what is traditionally called the Proxy design pattern.  Has anyone tried this (successfully!) with Access database files before? Words of caution or advice?
+",4067452,"The design isn't pretty I guess, but if you are using an MS Access database as a sort of ""scenario"" file for your calculations then this approach is the easiest to achieve what you want.
+As @drventure mentioned, normally you would use transactions to control whether changes get saved or not, but in your app you would have to start a ""gobal"" transaction upon opening the access database and committing or abandoning that transaction depending on what the user does. I have no idea however, how Access performs handling a transaction with multiple changes on multiple tables that is ""open"" for a long time...
+In both approaches you would have to deal with saves without closing the app? In the case of the transaction approach that is fairly simple: commit the global transaction and and immediately starting a new one. In the temporary file approach this could be a little more involved, as it would require closing and reopening the temporary file and making sure that the state of the application is preserved or re-established.
+",0,10,24,2.4,2,3,1,1
+11225,4116391,Passive View Pattern: Communication Among Components,"I treat each MVP triad as a isolated component. With the View implements a IView interface for example, the Presenter only know the View thru IView of course.
+That what I can make the component as reusable as possible.
+Now I have to combine those MVP components to form an application. I am wondering what the good practice is to keep those components as separated as possible. But of course I would need to have them communicate/react to each other.
+Can I just make the IView exposed to the other's Presenters? Or should I just let the presenters communicate with each other without knowing about the underlying Views?
+Thanks
+",4117117,"In MVP I see the presenters as the orchestrators of activity. As such they are the natural choice on which to base the composition of an application.
+Exposing the view of a presenter to other presenters breaks the idea of encapsulation within the MVP pattern. While it doesn't reduce the reusability of the component exposing its view, it does reduce the reusability of a component making use of another component's view as it increases that components dependencies.
+So I would keep the views private to the presenters and only let the presenters communicate with each other.
+
+Elaboration in response to comment
+When I say keep the view private to the presenter, I mean private: not exposed to the outside world except through the mediation of the presenter. Of course the presenter can expose methods to the outside world which will cause it to manipulate its view. If the presenter does this through an interface, it may actually use its own view as a delegate for the interface implementation, but - contrary to what you are proposing - the presenter delegates stuff to the view and not the other way around.
+Doing it this way ensures, or at least makes it a lot more likely that all interaction logic stays within the presenters and does not get littered throughout presenters and views.
+A view should only be manipulated by its presenter. Now of course you can reuse views in multiple presenters, but the instance of a view should only be manipulated by the presenter that instantiated it. If you expose it directly (even through whole or part interfaces), you start having to deal with a view that can be manipulated by mulitple presenters and no single presenter is in control of the view anymore.
+The only code I have in the view are the notifications to its presenter of what a user has done (also known as user gestures in some MVP discussions). It is up to the presenter to decide what to do about it. I also keep all logic about which controls to enable/disable in response to user selections in the presenter and not in the view. That not only keeps all interaction logic in the presenter, but also helps towards creating unit-testable user-interfaces (forms).
+",3,10,24,2.4,2,3,1,1
+11225,5392107,Delphi Singleton Pattern,"I know this is discussed many times everywhere i the community but I just can't find a nice and simple implementation of a Singleton Pattern in Delphi.
+I have an example in C#:
+
+I know there is no solution as elegant as this in Delphi and I saw a lot of discussion about no being able to correctly hide the constructor in Delphi (make it private) so we would need to override the NewInstance and FreeInstrance methods. Something along those lines I believe is the implementation I found on http://ibeblog.com/?p=65:
+
+What would be your suggestion regarding the Singleton Pattern? Can it be simple and elegant and thread safe?
+Thank you.
+",5392566,"The most effective way to make sure something cannot be instantiated is by making it a pure abstract class. That is, if you care enough to heed compiler hints and warnings.
+Then define a function in the implementation section that returns a reference to that abstract class. Like Cosmin does in one of his answers. 
+The implementation section implements that function (you can even make use of lazy instantiation here, as Cosmin also shows/ed).
+But the crux is to have a concrete class declared and implemented in the implementation section of the unit so only the unit can instantiated it.
+
+That said, please bear in mind that there are plenty of problems using singletons: http://jalf.dk/blog/2010/03/singletons-solving-problems-you-didnt-know-you-never-had-since-1995/
+Thread safety
+David is absolutely right in his comment that I was wrong before about the function not needing any protection. The instantiation does indeed need protecting or you could end up with two (possibly more) instances of the singleton and several of them in limbo with regard to freeing (which would be done in the finalization section as with many lazy instantion mechanisms). So here is the amended version.
+To get thread safety in this setup, you need to protect the instantiation of the singleton and you need to protect all methods in the concrete class that are publicly available through its abstract ancestor. Other methods do not need to be protected as they are only be callable through the publicly available ones and so are protected by the protection in those methods.
+You can protect this by a simple critical section, declared in the implementation, instantiated in the initialization and free in the finalization section. Of course the CS would have to protect the freeing of the singleton as well and should therefore be freed afterwards.
+Discussing this with a colleague, we came up with a way to (mis)/(ab)use the instance pointer itself as a sort of lock mechanism. It would work, but I find it to ugly to share with the world at this point in time...
+What synchronisation primitives are used to protect the publicly callable methods is entirely up to the ""user"" (coder) and may tailored to the purpose the singleton.
+",3,10,24,2.4,2,3,1,1
+11225,3763663,Inappropriate use of Builder pattern?,"For a design patterns class, the instructor asked my team to develop an application that supports drawing and persisting glyphs, very similar to the WYSIWYG editor from GoF.
+My team decided to use a Layered architecture, with descending layers: Presentation, Controller, Logic, Persistence.
+The Logic maintains a collection of glyph representations, their respective positions, and some shape-unique properties.  The instructor suggested we use the Builder pattern to create  uniform persistence mechanism, as CSV and XML are required persistence formats.
+The problem comes about when we attempt to design the Builder within the Persistence layer.  Because we're using Layers, the Persistence layer is not permitted to know about Glyph types explicitly, let alone cast them from their abstract form to their individual shapes. This has me scratching my head as for what to even pass each Builder as its constructor.
+The next problem is that its hard to generalize the types that the Builder takes. Rectangles have properties that Lines don't. 
+I'm having a lot of trouble grasping how to do this. I understand the Builder pattern, but something just isn't clicking. Am I misusing the pattern, or am I not fitting it to the problem correctly?
+Edit: The instructor didn't say we have to load the persisted formats back in. My ending solution should obviously make this easy, but for my current problem, I'm only focused on saving.
+",3766853,"Not sure you need a Builder for this. Factories / Registries and serializability are probably more to the point.
+The way you make the persistence layer ignorant of explicit glyph types, while still giving it the ability to save and load specific glyph instances, is through some sort of reflection mechanism. Either something built into the language (like Reflection in .Net, or RTTI in Delphi / C++ Builder), or something you handcraft yourself.
+To handcraft a solution yourself you will need to have all glyph types descend from a common ""serializable"" base type or have them all implement a ""serialize"" interface. The persistence layer only needs to know about this base type or interface - whichever you choose.
+Using an interface means the glyphs do not all need a common base type, using a common base type means you can implement common behaviour in that base type and avoid some duplication.
+The ""serializable"" base type or interface should provide the persistence layer with the means to identify the glyph type by a unique (string) ID, the means to iterate over properties to be persisted / loaded; and the means to instantiate a glyph polymorfically (virtual constructors and meta classes in Delphi speak).
+Getting the glyph type id and iterating over the properties to be persisted should be enough for saving instances.
+Iterating over properties should be simple and straightforward, but if you want to ""design patternize"" this you could consider using a Visitor. Which might make life a lot simpler when composed and aggregate glyph's (Grouping in drawing applications) get into the picture,  no pun intended :-). With regard to that, you could also consider having a look at the Composite pattern, though that may be overkill for what you have been asked to do.
+To load glyphs from a persistent store, you will need a registry somewhere where glyph types are linked with a unique name (string) so the persistence layer can look up the type to instantiate from a string in the persisted information. Each glyph type will need to register itself in the registry so it can be found and instantiated by the persistence layer. Look up Factory Method and Abstract Factory pattern for more information on this.
+",2,10,24,2.4,2,3,1,1
+11225,4890326,Which Design Pattern should I use to model a Person-Role relationship?,"I just couldn't figure out which design pattern I should adopt here. Say I have class like this:
+
+In short, a Person has roles and do() method depends on on what his role is. In some cases, he may have to switch roles. I think this do() should be abstracted (more so because there may be other roles defined in the future)---but how? Should there be a Role class?
+Any help will be appreciated.
+Edit:
+Thanks for sparing your time, people. I'd like to add one more thing. I did think (at least as an idea) many of the suggested solutions. Here are are my difficulties: If I subclass Person class (such as PersonTypeA, personTypeB, etc., and assign each particular role to the appropriate person type, then I have a difficulty when switching roles (for instance, an engineer becomes an accountant!---Weird, to say the least.
+On the other hand, if I create classes for each role; then (1) a role does not feel like an object, because (at least in my case) a role does not have attributes but only method(s). Consequently, role_A_1 is no different than role_A_2. But for each person I'll have to create a new role object---even if they both share the same role.
+I'm not sure if I made myself clear and I'm not sure if my points make sense at all.
+",4897094,"I have found that dealing with persons, companies and roles is something that is repeated over and over again. Martin Fowler's analysis patterns book (with Ward Cunningham and Ralph Jackson) has an extensive discussion that is worth reading in depth.
+An online version of the ""Dealing with roles"" chapter (or a summary of it, I don't have the book handy) can be found as: http://martinfowler.com/apsupp/roles.pdf.
+Martin Fowler's site also has an entire section dealing with analysis patterns: http://martinfowler.com/apsupp/roles.pdf
+",2,10,24,2.4,2,3,1,1
+11225,3529060,How do i test for a dynamic set of elements from my code without hard-coding?,"The question will best be understood with an example.
+I have Hospital One who have 3 main pharmacies called; Central Pharmacy, Ward Pharmacy, and Private Suite.
+These pharmacies can be added, deleted, and extended at will. While these go on i would love to know from my code when we are talking about a Central Pharmacy or a Ward Pharmacy without hard-coding the id.
+Can someone help me on how i could go about solving this problem?
+I'll present a different scenario when this is answered. Thank you everyone in advance.
+Edit #1
+I think there will be some kind of table design & code design pattern to enable this sort of flexibility.
+",3529315,"Without hard-coding id's, there are two ways to go about it:
+
+Add a ""Pharmacy Type"" to the pharmacies table. Have that indicate whether it is a Central Pharmacy, a Ward Pharmacy or a Private Suite.
+Add a different table with three rows one with the central pharmacy and its id, the second with the ward pharmacy and its id, etc.
+
+With regard to the first option:
+If you can have only one Central Pharmacy your code needs to ensure that, by making sure that the type can only be set to ""Central"" when there is no other pharmacy with that type.
+If you need to have a Central Pharmacy at all time, then your code needs to make sure that the Central Pharmacy cannot be deleted and may just ""drop"" the Central Pharmacy type from the interface for adding deleting and changing other pharmacies.
+Please note that when coding such ""single instance"" constraints, you may need to look at table wide locks or re-reading / re-checking just before and just after the update. In the end having a single non-deletable Central Pharmacy may be a lot simpler to deal with.
+",1,10,24,2.4,2,3,1,1
+178761,3423791,How to repeat a few characters a few times in bash?,"In a bash script, I have to include the same file several times in a row as an argument. Like this:
+
+where  should be repeated a few times.
+Is there a bash shorthand for repeating a pattern?
+",3424214,"Here is a solution that uses arrays and is thus robust for strings containing spaces, newlines etc.
+
+",2,6,45,7.5,2.5,3,2,1
+178761,3118929,Implementing the decorator pattern in Python,"I want to implement the decorator pattern in Python, and I wondered if there is a way to write a decorator that just implements the function it wants to modify, without writing boiler-plate for all the functions that are just forwarded to the decorated object. Like so:
+
+I would like to have calls to  forwarded to  automatically. Is there a way to write a generic method that forwards all unimplemented function-calls to ?
+",3119031,"You could use :
+
+",32,6,45,7.5,2.5,3,2,1
+178761,3132258,Where did variable = null as &quot;object destroying&quot; come from?,"Working on a number of legacy systems written in various versions of .NET, across many different companies, I keep finding examples of the following pattern:
+
+To anybody that knows how memory management works in .NET, this kind of code is painfully unnecessary; the garbage collector does not need you to manually assign  to tell that the old object can be collected, nor does assigning  instructs the GC to immediately collected the object. 
+This pattern is just noise, making it harder to understand what the code is trying to achieve.
+Why, then, do I keep finding this pattern? Is there a school that teaches this practice? Is there a language in which assigning  values to locally scoped variables is required to correctly manage memory? Is there some additional value in explicitly assigning  that I haven't percieved?
+",3132298,"It is more common in languages with deterministic garbage collection and without RAII, such as the old Visual Basic, but even there it's unnecessary and there it was often necessary to break cyclic references. So possibly it really stems from bad C++ programmers who use dumb pointers all over the place. In C++, it makes sense to set dumb pointers to 0 after deleting them to prevent double deletion.
+",3,6,45,7.5,2.5,3,2,1
+178761,3179460,Python: **kargs instead of overloading?,"I have a conceptual Python design dilemma. 
+Say I have a  class, which represents a city in the database. The  object can be  initialized in two ways:
+
+An integer (actually, an ID of an existing city in a database)
+A list of properties (, , , ...), which will generate a new city in the database, and retrieve its ID.
+
+This means that the City object will always have an ID - either the initialized ID or a newly-created ID derived from the database.
+The classic Java approach would overload the constructor - One constructor would get a single parameter, and the other would get numerous strongly-typed parameters.
+I've failed to find an elegant way to do it in Python:
+
+I can create a base class with a single method , and derive  and 
+ from it, but that's a lot of effort to work around this language lacuna.
+Using class methods seems awkward.
+Using a constructor with a long list of parameters is also awkward: I'd put both city id and the alternatives, and verify within the method that that only a specific subset have values.
+
+Using  seems very inelegant, because the signature of the constructor does not clearly state the required input parameters, and docstrings just ain't enough:
+
+Is there a Pythonic, elegant solution to constructor overloading?
+Adam
+",3179634,"I think that the class (factory) method is the best one because already the method name states explicitly what is done. Two free-standing functions would also be fine:
+
+",2,6,45,7.5,2.5,3,2,1
+178761,3226808,Is factory method appropriate here?,"I am generating a sequence of  objects that differ by ""Type"" and data contained within. e.g:
+The  objects should basically be structs that look like this
+
+where ,  and  indicate :
+
+As you can see, depending on , these structs each have variable numbers of  data fields after the .
+I plan to iterate over a sequence of these structs and perform a particular action based on the  field. My first hunch is that these should be objects of classes derived from an abstract  class - i.e. I should create a  class, a  class and a  class.
+Is this a good design and if so should I create them using a factory method? If a factory method is the way to go, then how to initialise the fields within the objects?
+",3226892,"If you need run-time polymorphism, then I think it's a good design. Regarding the factory function: if your clients need one, then write one. The factory function simply calls the constructors of the subclasses.
+",1,6,45,7.5,2.5,3,2,1
+178761,4762384,Python convention: function constructor for a private class,"I have noticed this in Python's threading module source:
+
+Am I correct in assuming this is an attempt in mimicking a ""sealed"" class (c#) or a ""final"" class (java) in other languages? Is this a common pattern in Python? Are there any other approaches to this problem in Python?
+",4762949,"I don't think I like this choice of identifiers. It is conventional to start class names with an uppercase letter, so you'd think that you could say , but you can't. I think a name such as  that unambiguously identifies the function as a function would have been better.
+This issue has already been discussed on the mailing list, where the BDFL states:
+
+This started out as an experiment in API
+  design, where I tried to make things look as much like the similar
+  Java API as possible (I didn't want to invent yet anotherwobbly
+  wheel). I specifically wanted these not to be classes so that people
+  wouldn't start subclassing them. At the time PEP-8 wasn't well
+  established (if at all) and I wanted the factory functions to look
+  like classes. I think in 2.7 / 3.1 we can change the factory functions
+  to conform to PEP-8 (leaving the old names in for a couple of
+  release).
+
+The change he mentioned hasn't been done yet, but I think it's pretty safe to say that nowadays the naming scheme is seen as misguided and should not be proliferated.
+You're right when you say that these factory functions were introduced to mimic a sealed class. The BDFL says
+
+Allowing them to be subclassed makes it harder to replace them on some
+  platforms with equivalent but faster implementations.
+
+I don't think this scheme is too common. Most of the time, there is no incentive to replace classes with equivalent implementations, and if a class is not designed for subclassing, you can mention that in the documentation.
+",5,6,45,7.5,2.5,3,2,1
+967492,3423791,How to repeat a few characters a few times in bash?,"In a bash script, I have to include the same file several times in a row as an argument. Like this:
+
+where  should be repeated a few times.
+Is there a bash shorthand for repeating a pattern?
+",8455835,"This might work for you:
+
+This will repeat  5 times before 
+",0,9,5,0.56,0,1,0,0
+967492,46348102,sed print text between 2 pattern and select n occurence,"I've been passing hour to search on the net but i can't find a solution to a problem that looks just so easy...
+i have a file with multiple pattern match
+
+This is the output i get with the command 
+
+But the question is how can i chose only the nth occurence ? (1 - 2- 3 etc.. that i can then replace with a variable)
+Thanks in advance
+",46355274,"This might work for you (GNU sed):
+
+Used the hold space as a counter and print only those lines that match the required number i.e. in the above that number is 2.
+N.B. Assumes that  and  are matched throughout the file.
+",1,9,5,0.56,0,1,0,0
+967492,13284129,SED: Insert line above pattern and append the pattern space to it,"In a file i find a pattern I am trying to match. When I find it, I then insert a line above, but what I cannot seem to do is take the pattern space and append it to the line I am trying to insert. Like so:
+
+Hoping that ""&"" will print pattern space like it does with s
+Regards and thank in advance
+Creigh
+",13287256,"This might work for you (GNU sed):
+
+with reference to comments:
+
+",2,9,5,0.56,0,1,0,0
+967492,4506051,"help - sed - insert space between any string of form XxxXxx, without replacing the pattern","If the string is of the pattern XxxXyzAbc...
+The expected out put from sed has to be Xxx Xyz Abc ... 
+eg: if the string is QcfEfQfs, then the expected output is Qcf Ef Efs. 
+If i try to substitute the pattern [a-z][A-Z] with space then the sed will replace the character or pattern with space, like Qc f fs. 
+Is there any way to insert space in between without replacing the pattern ?.  
+Kindly help. Thanks.  
+",22883074,"This might work for you (GNU sed):
+
+Looks for a non-word boundary followed by an uppercase character and inserts a space throughout the line.
+",0,9,5,0.56,0,1,0,0
+967492,8076056,match a pattern and print subsequent lines,"there are 200 files named File1_0.pdb,File1_60.pdb etc....it looks like:
+
+i have to extract the part after TER and put in a different file...this has to be done on all 200 files. I did something like  . But this will work for one file at a time...can there be a solution for all 200 files in one go... output file is named same only ""File"" is removed from the name...
+",8077827,"This might work:
+
+",0,9,5,0.56,0,1,0,0
+967492,26257210,"grep a specific line, print upper lines to a specific word and/or below lines to a specific word","I'm recently running into an issue where I seem not to find a consistent solution.
+Let's say we have some xml file and it's built like the following:
+
+And let's say there might even be more options like  and some other stuff. So it really can vary of the length there.
+Now we know the ""something"" that it is ""whatever"" and grep for it. But we don't only want that result, we want all results between  and  that include .
+Since the number of lines might vary between  and , I can not use -A, -B or -C on grep.
+Any help would be apprechiated here.
+I currently just make -C big enough so I have at least all infos between there but maybe once the length will be longer and my method is screwed up.
+",26262802,"This might work for you (GNU sed):
+
+",0,9,5,0.56,0,1,0,0
+967492,10305489,Grep specific pattern from different columns of line using bash,"I have some results, and I need to get the pattern like: ""./."", ""0/1"", ""0/0"".
+How can I do this using bash?
+Thanks.
+
+",10306067,"This might work for you:
+
+",0,9,5,0.56,0,1,0,0
+967492,9438673,"Using BASH script, how to change lines based upon a pattern?","I have a file that I need to process
+
+I want to remove leading  character, if I pass a pattern pattern. So if I pass  I want to remove  from the next 2 lines (till the next pattern) - always 2 lines after the pattern. I tried with  without success.
+Thanks
+",9440468,"This might work for you:
+
+",1,9,5,0.56,0,1,0,0
+967492,9918232,Using awk how do I reprint a found pattern with a new line character?,"I have a text file in the format of:
+
+Where ""bcd"" can be any length of any characters, excluding  or 
+What I want to do is print the text file in the format of:
+
+-etc-
+My method of approach to this problem was to isolate a pattern of """" and then reprint this pattern without the initial 
+I concluded I would have to use awk's 'gsub' to do this, but have no idea how to replicate the pattern nor how to print the pattern again with this added new line character 1 character into my pattern.
+Is this possible?
+If not, can you please direct me in a way of tackling it?
+",9923231,"This might work for you:
+
+
+Prepend a newline () to any string not containing a  or a  followed by a 
+Remove any newline prepended to the start of line.
+Replace any  followed by none or many spaces with a  followed by a single space.
+Print all lines.
+
+Or this:
+
+",1,9,5,0.56,0,1,0,0
+272388,3427073,Java Interface-Implementation Pair,"Is there a preferred method or style of creating a default implementation for interface methods? Suppose I had a commonly used interface where in 90% of the cases the functionality I wanted was identical. 
+My first instinct is to create a concrete class with static methods. I would then delegate the functionality to the static methods when I want the default functionality.
+Here is a simple example:
+Interface
+
+Concrete Implementation of methods
+
+Concrete Implementation using default functionality
+
+Is there a better approach here?
+EDIT
+After seeing a few of the proposed solutions I think I should be more clear about my intent. Essentially I am trying to work around Java not allowing multiple inheritance. Also to be clear I am not trying to make a statement about whether or not Java should allow multiple inheritance. I am just looking for the best way to create a default method implementation for classes implementing an interface. 
+",3442401,"Most of the time, I go with something like this:
+
+I tend to use inner classes because these classes are really related, but you may also use regular classes.
+Also, you might want to put the utility class () in a separate file if the methods don't only concern the interface.
+
+By the way, the problem with decorators is that they hide other implemented interfaces. In other words, if you have a something decorator the following is false  if  does not implement the interface of lists.
+You can work arround using reflection API and in particular using a Proxy.
+Another good aproach are adaptors, as pointed by PersicsB.
+",1,5,7,1.4,1,1,0,0
+272388,9227665,How can I implement a lazy-evaluated stateful class with internal dependencies in Java?,"I'm writing a financial calculation class which will have a number of setter function inputs, some private intermediate values and a number of getter functions as outputs.
+
+The private intermediate values are only dependant on the input values.
+The output values (accessed by public getters) are only dependant on the inputs and the intermediate values. 
+
+Ultimately you could draw the whole thing as a somewhat tangled acyclic directed graph whith a bunch of inputs on one side, eventually flowing to a bunch of outputs on the right hand side.
+What's the best way to implement this class. I have some spesific requirements:
+
+Where possible, lazy evaluate. When an input changes we have now way of knowing what outputs might be required.
+The class has to be easy to re-design, so some kind of declarative model would epreferred. 
+
+Ideally I'd like to be able to say that C depends on A and B. If C were requested after either A or B had changed then it would know tht C needed to be re-calculated, otherwise C would never need to be refreshed.
+IIs there a Java pattern that might help me cleanly implement this kind of calculator?
+",9235868,"You can build a solution by creating a future value that is recalculable.
+
+It is completely lazy and figures out the dependencies.
+",2,5,7,1.4,1,1,0,0
+272388,6929702,Looking for an OSGi Design-Pattern,"I'm currently facing an interesting problem in my OSGi application.
+I'm implementing a configuration service that should retrieve the application's configuration from multiple sources (file, registry or network). The configuration service should read from the sources in a special order until he got a value for the configuration property.  
+First I thought of putting each source in a separate bundle, create a super interface for them and let them provide a declarative service. This would also help to modularize the registry which is required since it is not available on every OS. When the configuration service is asked for a property's value it queries for all source bundles according to the whiteboard pattern and reads the configuration until he got a non-null value. But it does it in a random order.  
+Does anyone have an idea how to implement a special order in traversing the bundles providing the configuration service?
+Best regards
+",6930928,"In general if you need a special order of traversing for a bunch of objects, you just define a (partial) order between your objects.
+Then, you sort the objects you've got and go through that list.
+So, for your problem, when a property's value is needed, you find all the sources, you sort them in a list and finally iterate though it.
+",1,5,7,1.4,1,1,0,0
+272388,6155956,Design Patterns question,"I have a following problem I want to solve ellegantly:
+
+At the start of the system I want to define dynamic type of IMyClass by using Init() and during the run of the system i would like to create new instances of the type I defined at init.
+
+
+Notes:
+1. IMyclass must be interface
+2. The dynamic type of IMyclass known only at init (i have no constructor after :) )
+3. I could do it using a reflection or definition method clone at IMyclass is there any better solutions?
+Thank you.
+",6156261,"This is a kind of dependency injection, you should read:
+
+http://en.wikipedia.org/wiki/Dependency_injection
+http://www.martinfowler.com/articles/injection.html#FormsOfDependencyInjection
+
+Basically, you have a class  that is populated with factories (or providers) at initialization. Then you use  instead of calling .
+A quick example:
+
+
+Edit:
+ added 
+",2,5,7,1.4,1,1,0,0
+272388,5330350,Is this code abusing the Observer Pattern?,"If an Observable object notifies its Observers when one or more of the variables (animals) below is assigned to a new animal, is this an improper use of the Observer Pattern since the Observer will end up setting all four animals when only a subset of them have changed? If so, how could this be fixed? Also, how could an interface be constructed that would specify that the Observer is to set those specific animals and that the Observable is to notify the Observers if those animals are changed? Thanks in advance.
+
+",5330597,"
+Updating only a subset
+
+Most of the time, it is not a problem, there are few instructions that will just refresh the values.
+However, if you want to update a subset, you should use the second argument of  and set it to a discriminant that will tell what to update. For this you may use a set of the types of objects that have changed.
+
+Observing specific animals
+
+Often, you will just begin the code of your observer by  where  tells whether the object will be observed.
+The other way of doing it is to create an observable that will be an oberver.
+A quick example is easier to understand:
+
+Sometimes it is easier to reimplement entirely the observer pattern: it gives you more control and your observable may be an interface so you won't need to subtype.
+",1,5,7,1.4,1,1,0,0
+245679,3458269,Design Patterns: Do you use them in your projects?,"How do you decide on which design pattern to choose for?
+My approach to development projects has always been.
+
+Take down business requirement.
+Design the database.
+Decide on technology (This decision is almost always driven by the client.)
+Start developing a prototype.
+Get prototype approved. (iterative)
+Build the application.
+Release for testing. (iterative)
+Hand over for maintenance.
+
+I am not sure where a design pattern would be useful.
+",3458360,"It will be useful in the 4th and the 6th step... :-)
+In prototyping design patterns can be really handy. If the existing architecture/design isn't flexible enough, then adding more features to an existing prototype will be really messy. Though it doesn't mean that you should always use design patterns. It's the principle they teach is important, like open-close principles, information hiding and how to do that properly and when, favoring composition over inheritance etc. All these guidelines have been there to make the job of adding more features to an existing application/prototype less painful.
+Over the course of your development career, you will see such principles to be used in many places. It isn't necessary to strictly follow some patterns, but the principles behind those patterns that you should try to follow.
+Hope that helps.
+",3,7,15,2.14,2,2,1,1
+245679,18357687,Preferable Factory method implementation,"I can implement Factory method in following ways:
+Approach 1:
+
+Approach 2:
+
+Which approach is better? 
+What are the advantges/disadvantages of the approaches?
+Please let me know the best approach.
+",18357756,"If you follow the first approach, then if you need to create a new type in the future, let's say, , then you'll need to modify the  method to write the creation code for . This violates the Open/closed Principle - 
+
+If you follow the second approach, then you won't need to modify your existing code. You could easily incorporate the new type in the following way - 
+
+This way you don't need to modify your existing codes.
+Choose whichever you feel to be appropriate for your use case.
+",1,7,15,2.14,2,2,1,1
+245679,15690312,Design pattern Adapter in Javascript for cross platform HTML5 app,"I am developing a cross platform HTML5 app that will be wrapped in Android, in Windows 8, in iOS and there will be also a web version
+Since every platform has different ways of accessing dom, or accessing storage, or accessing cameras, my idea was to create a function like:
+
+And from Addyosmani book:
+
+The Adapter Pattern translates an interface for an object or class
+  into an interface compatible with a specific system.
+
+In terms of Design pattern, is it considered to be a Factory? and Adapter? How do I write this class to be ""in the standard"" of OOP design patterns?
+",15690531,"Your implementation is somewhat close to the Factory pattern, though it has some differences with it. You can find an example of the standard factory pattern here and see the differences by yourself. In your code, you are simply encapsulating your object creation inside a method.
+Having said that, don't just use patterns because you want to as it tends to lead to poor and complex application architecture. Use the most simple solution which solves your problem at hand. If that problem and the solution matches with a standard pattern, you should then rafactor your code to implement that pattern. This approach is called refactoring into patterns, and is the right way to use the standard design patterns.
+",2,7,15,2.14,2,2,1,1
+245679,32152745,Singleton Pattern in Multi threaded environment,"During my interview, interviewer started his question with singleton pattern. I wrote below. Then, he asked Shouldn't we check for Nullity inside  method?
+I replied with, It is NOT necessary, since member is static type and is being initialized at the same time. But, seems like he was not satisfied with my answer.Am I correct or not ?
+
+Now, next question he ask to write singleton class for multi-threaded environment. Then, I wrote double check singleton class.
+
+Then, he had an objection with using  and double check and said It is useless. Why are you checking twice and why are you using synchronized ? I tried to convince him with multiple scenario. But, he didn't.
+Later, at home I tried below code where I'm using simple singleton class with multiple thread.
+
+Below is the output :
+
+So, question is, Is it necessary to use  or/and double check method in multi-threaded environment ? It seems like my first code itself (without adding any extra line of code)  was the answer for both question. Any correction and knowledge share will be appreciated.
+",32152854,"Your first answer seems to be good for me, as there are no chance of a race condition whatsoever.
+As for knowledge share, the best approach to implement a singleton in Java is using Enum. Create an enum with exactly one instance, and that's it. As for code sample -
+
+From the good book Effective Java -
+
+[....] This approach is functionally equivalent to the public field approach, except that it is much more concise, provides the serialization machinery for free, and provides an ironclad guarantee against multiple instantiation, even in the face of sophisticated serialization or reflection attacks.[...] a single-element enum type is the best way to implement a singleton.
+
+",1,7,15,2.14,2,2,1,1
+245679,3777295,What is this pattern called?,"
+So you basically return from each method the modified object so can you call new methods on it.
+",3777374,"The answer is provided by Boldewyn, I am just writing this as a suggestion.
+When chaining methods like this, try to write it as follows - 
+
+This improves code readability.
+",4,7,15,2.14,2,2,1,1
+245679,4795127,What are singletons?? how to use them?? and why to use them?,"
+Possible Duplicate:
+Singleton: How should it be used 
+
+hello. i want to know what a singleton is? how to use it? and why do i have to use it. thank you very much. if anybody can give examples with the explanation i would really appreciate it.
+",4795244,"If you need only a single instance of an object, then you use singleton. It is one of the many standard design patterns.
+Let me clarify with a piece of code - 
+
+Since this class's constructor is private, it cannot be instantiated in your application, thus ensuring that you have exactly one instance of class .
+Use this pattern when you need to ensure only one instance of a particular class is created within your entire application. 
+To learn more, go here.
+",2,7,15,2.14,2,2,1,1
+245679,10734123,Better pattern observer?,"I use pattern Observer, but found that it getting difficult to inherit from classes have listeners. If in inherited class also exist listeners very difficult controll which listeners work.
+Does exist pattern similar to Observer but with better control of listeners?
+Thanks.
+",10734192,"Seems like you don't want to use inheritance to implement Observer Pattern.
+If I am not mistaken on the above point, then you could always implement this using interfaces. Just declare two interfaces for the Subject and the Observer, and then have your classes implement those. 
+For example, your Subject could look something like this - 
+
+Observer - 
+
+Then, your concrete subjects can inherit from the above  interface - 
+
+and your  implementation - 
+
+and then you can use - 
+
+This approach is certainly better than  because in this case both your subject and observer can inherit from other classes, providing a more flexible design.
+If your question is about providing java listener implementation without inheriting, then you can use Annonymous Classes for this purpose - 
+
+",2,7,15,2.14,2,2,1,1
+79737,3461055,Factory pattern and class templates in C++,"I have a hierarchy of class templates.  At the top of the hierarchy is an abstract base class (interface).  I won't know which concrete implementation to instantiate until runtime, so it seems like the perfect situation to use the factory pattern.  However, virtual member function templates are not allowed in C++.
+How can I achieve a legal design similar to the below in C++?
+The individual concrete implementations of the IProduct interface as well as the concrete factories will live in different dynamic libraries, one or more of which will be loaded at runtime.
+
+",3461157,"This doesn't need a template. Does that eliminate your problem?
+",-1,5,1,0.2,0,0,0,0
+79737,1295524,When do I need to stop using design patterns?,"My colleagues are going crazy because I keep on wanting to rewrite code that already works, because I would like to replace some legacy design with design patterns. Although I feel like it will help improving the existing code, I do feel like I am getting a little paranoid about it and try to use them everywhere and even replacing one design pattern with another. Some of my colleagues say that so long as the legacy code works, leave it alone.
+When should I stop using them? Where do you draw the line between code that needs to be replaced by a better design and the one that needs to not be touched?
+",1295644,"I go with the ""money"" method. Rewriting existing code costs your employer money (your salary, etc.). Can you honestly say that your rewrite will cost your employer less than leaving it the way it is? In my experience the answer is almost always ""no"".
+I've met more than a few whose ability to quantify cost was poor, never gave it any rational consideration, or cared more about their immediate desire to extract a paycheck than delivering good value to their employer. I personally have found good employers will come to recognize you're helping them and will come to trust your judgment over time.
+",0,5,1,0.2,0,0,0,0
+79737,2715166,Ignoring (serious) errors to keep the program alive?,"One of the main things I wanted to achieve in my experimental programming language was: When errors occur (Syntax, Name, Type, etc.) keep the program running, no matter how serious or devastating it is.
+I know that this is probably very bad, but I just wanted something that doesn't kill itself on every error - I find it interesting what happens when a serious error occurs but the program continues.
+
+Does this ""paradigm"" have a name? I mean expect for 
+How bad is it to do the above?
+Are there programs in use out there that just follow: ""Hey, this is a fatal, unexpected error - but you know what? I don't care!""?
+
+",2715472,"I went with the 'military topology' method of handling errors.
+Errors should be classified by severity, then either dealt with or passed up to a superior for resolution.
+A private is ordered to go clean the parade ground with a toothbrush. He runs out of soap. That's a problem he should figure out himself and not bother his superior.
+If the parade ground has a platoon of enemy soldiers landing on it it's probably something he should tell his superiors about.
+Please credit me in the 'snark' section of your book when you're rich and famous.
+",1,5,1,0.2,0,0,0,0
+79737,2632090,Design question: Holding class metadata for dynamic lookup,"I have a couple of base/interface classes each of which has several derived classes. I have a need to store metadata on each derived class that has a lot of overlap, but different values.
+I also have a Factory class for creating instances of the derived classes that's implemented as a singleton and has a few macros. For example, you'd:
+
+The question is: how and where to store the metadata from a solid design viewpoint.
+I could store the data in the ComponentRegister as a QMap structure. When someone registers a component, they could also register its metadata with something like
+
+If the QVariant::isValid() for a particular key, you know the metadata is set and available. 
+Another way would be static class variables or maybe a static class QMap. 
+I see advantages and draw backs to both. Most of the metadata are things like ""path to QResources for this class"" which is not tightly coupled to the business logic of the class itself. 
+Another issue with the static class variable method comes into play with inheritance. You can't enforce overriding of static class variables like you can with pure virtual functions. So if someone forgets...it could be unclear where in the inheritance tree the values are coming from. If you require access to the metadata through a series of pure virtual ""getters"" then setting of the MetaData is spread across all implementations of the Base class. 
+With data held, set, and looked up in the Register if you needed to make changes (like changing the root path for resources), you could do so at a single point...in the class registration calls, probably a header or wrapped in a application Utility function. With static data, you'd have to edit each class declaration.
+Open to suggestions and thanks!
+",2632543,"If data related to an object isn't specific to a single instance, as the path in your example, my designs usually include a class which manages my collection of objects. That's where I put the meta data.
+example:
+
+count is metadata about the animals.
+",0,5,1,0.2,0,0,0,0
+79737,5980702,Design approach for interface with many input widgets,"I have an interface that has ~16 input field boxes.  They are all declared as public pointers within a class, initialized, etc.  However, as my code has grown more and more with private functions doing database committals, error checking, temporary storage routines, etc it has become very painful if a field has to get removed or a new one added I must delve into all these private functions and explicitly remove/add the field; and always with regard to the field ordering.
+There has to be a simpler way!
+This is my idea and am hoping anyone can shoot it down or build upon it:
+My thought is to store pointers to all the input fields in a array of pointers and then all these private helper functions walk the array; however some of these private functions are static some are non-static; thus some more pointer magic is required, or should I have two of these array-of-pointer functions: one for static functions to use and one for non-static functions to use?
+To further complicate things, the method invoked upon the widgets varies depending on what the private function is doing... Some may call ""->value(foo)"" some may call ""->location(1),->location(2),"" incrementing in order of the widgets.  Is there a way to pass the method invoked and the parameters to be passed to this new helper function containing the array of input field pointers?
+Food for thought:
+Maybe I'm trying to get too fancy by saving myself the burden of scrolling all around my code whenever I need to make a change? Maybe this will add too much overhead with all the extra pointer indirection? Is it better to suffer?
+Thanks, any help is appreciated.  If some code examples are really required I can churn out some.
+Code Example (this won't compile and is typed freehand as an example)
+
+",5981413,"My take on what you said is that your code is getting to complex to follow. I see the problem as it's one big lump that is too hard to follow. So the response should be to break it up into smaller more manageable chunks.
+You might consider adopting something like the M.V.C. Pattern. The basic idea is you break the code into three sections. The ""Model"" part handles all database activity. The ""View"" part handles all GUI interaction. The ""Controller"" part handles implementing the logic. This will help make the huge-lump-o-code™ a little easier to maintain.
+",1,5,1,0.2,0,0,0,0
+390278,3465614,Optimization: How should i Optimize the Linq Concat of Collections? C#,"is there any way i can Optimize this:
+
+",3465802,"No point in making the query parallel at the very end.  Update: Jon was right, my initial solution was incorrect and turns out my corrected solution was essentially the same as his.
+
+",1,5,36,7.2,2,3,2,1
+390278,5786441,python: calling super().__init__ too early in the __init__ method?,"I have a class hierarchy where  in  performs some pre-initialization and then calls method . The  method is defined in , but it's expected to be redefined in derived classes. The redefined  will use some of the attributes that are only available in :
+
+This is not going to work because  method in  will be invoked before self.additional_attr is assigned. 
+I can't move  call to the end of the  method because some of the work it does has to happen before processing .
+What to do?
+",5786615,"Perhaps you shouldn't have the  call in your constructor then. If you can't construct a derived object by allowing the base constructor to complete first, then you must be doing something wrong IMHO. A sensible approach would be to move that call out of the constructor and perhaps create a factory method to make that call automatically.  Then use that method if you need precalculated instances.
+
+",7,5,36,7.2,2,3,2,1
+390278,37263799,A class to help access a chunk of memory,"I need a class to help me access a chunk of memory
+So far I have this
+
+Now I would like to do something like this
+
+I know I could put  but I feel like there must be a solution that requires less dynamic allocation.  
+P.S. The reason I want to use properties is because I am binding to them in my GUI
+",37263987,"Rather than just accepting an array of bytes, change it so you get an offset too.  Then you'll be able to get that to work.
+
+",0,5,36,7.2,2,3,2,1
+390278,14639481,Merge multiple Lists into one List with LINQ,"Is there a slick way to merge multiple Lists into a single List using LINQ to effectively replicate this?
+
+Or, since the lists arrive separately, its more effective to merge them sequentially like the following.
+
+",14639590,"You're essentially trying to zip up three collections.  If only the LINQ  method supported zipping up more than two simultaneously.  But alas, it only supports only two at a time.  But we can make it work:
+
+Of course it's not terribly painful to write up an extension method to do three (or more).
+
+This makes things a lot more nicer:
+
+",26,5,36,7.2,2,3,2,1
+390278,3819142,"Default value of Version class: null or (0,0)?","we identify client software using Version class and use these values extensively, we also store these values in database. How would you store unknown version value? We can get unknown version value if we wasn't able to successfully query client version. 
+I ask because I'm fond of Null object pattern, I don't like constant checks for null, and I wish that Version type was a value-type instead of reference-type. But Microsoft implemented Version type as reference-type. At the same time, in .NET v4 they added TryParse() method, which in case of failure saves result as (0,0) but not Null. If you call default constructor without providing exact version value, you would get (0,0) value, and internal fields get initialized to (0, 0, -1, -1). Perhaps, Microsoft realized, that Version should be value-type, who knows :).
+But what is the best approach in handling unknown version values? Always check for null, or use default constructor?
+",3819223,"I would use the ""default"" value of  rather than .  As you stated, you won't have to deal with null checks (though, could easily be resolved using null coalescing), it's a value used by the framework as the default value (and failure condition), and I don't know of any situations where having version  makes sense anywhere.  Also I was under the impression that assemblies must always have a version number.  So a value of  might not always be available, particularly in an assembly.  Or at least if this value is for your benefit, you should follow the pattern used by the framework.
+",2,5,36,7.2,2,3,2,1
+6782,752001,implementing interfaces after the fact,"I think, the following can't be done in Java. But I would be happy to learn how to implement something that resembles it.
+Suppose we have a class C, that is already used in compiled code. (We can neither change that code nor the original definition of C).
+Suppose further there is interesting code that could be re-used, if only C would implement interface I. It is, in fact, more or less trivial to derive D that is just C + the implementation of the interface methods.
+Yet, it seems there is no way, once I have a C, to say: I want you to be a D, that is, a C implementing I.
+(Side remark: I think the cast (D)c, where c's runtime type is C, should be allowed if D is a C and the only difference to C are added methods. This should be safe, should it not?)
+How could one work around this calamity?
+(I know of the factory design pattern, but this is not a solution, it seems. For, once we manage to create D's in all places where formerly were C's, somebody else finds another interface J useful and derives E extends C implements J. But E and D are incompatible, since they both add a different set of methods to C. So while we can always pass an E where a C is expected, we can't pass an E where a D is expected. Rather, now, we'd need a new class F extends C implements I,J.)
+",752038,"Couldn't you use a delegate class, i.e. a new class which wraps an instance of ""Class C"", but also implements ""Interface I"" ?
+
+and then, if you need to invoke a function which normally takes a parameter of type  just do this:
+
+",10,7,16,2.29,1,2,1,0
+6782,21695917,Inheritance vs class as a member of another class,"This is a theoretical question, I haven't figured a straight well explained answer yet, about object oriented design.
+Let's say we have a class of a Music Event, and we would like to implement a Rating class with maybe one int member(stars 1-5) and maybe one getter and one setter function.
+Maybe I haven't thought some bigger picture yet?
+If we want our Music Event class to have ratings (just one not an array), why is it better -if it is- to inherit from the Rating class, and not to add a Rating class member inside the Music event class?
+in coding:
+
+",21695936,"The rating should be a member - it is an attribute of the event (i.e. something that belongs to it).
+Deriving from  would only ever make sense if you wanted to treat many sorts (or ""classes"") of rateable events as a common set without caring what sort of event they were.
+",0,7,16,2.29,1,2,1,0
+6782,13006694,How can I create this API with JavaScript and break out the methods,"Let's say I wanted to have this API for an example to do app:
+
+I have it setup currently like:
+
+So, if you see the comment, the problem is that """" inside of  is obviously referencing , but I need it to grab the """".
+Best I could think of was:
+
+But both of these aren't great. The biggest problem is that I don't want to have all my methods on  inside of a single object (1st example) or function (2nd). I want to be able to take them out  from inside of the model def. Secondly, I'd like to have the  API.
+Is there a design pattern to achieve this?
+",13006791,"You can't use the prototype pattern for  as you've written it because  is a property of .
+I think you need:
+
+a new  object, on which you can use the prototype model.
+in the  constructor, create a  object.  Ideally, use a read-only ""getter"" function to allow that model object to be accessed, but not overwritten.
+
+",1,7,16,2.29,1,2,1,0
+6782,8727384,Singleton isn&#39;t returning existing instance,"This is how I've set up my Singleton
+
+In , I do this:
+
+In file1.php, I have a hyperlink to file2.php, where I have this code:
+
+It seems it is creating a new instance for file2, which is why  has the default value of . Where am I going wrong? Why don't I get the instance I was using in file1.php?
+",8727426,"Static data only works within a single PHP program.
+If your two scripts are running as separate pages they will not share any state.
+",3,7,16,2.29,1,2,1,0
+6782,8294729,code style: multiple returns,"I'm writing a method along these lines:
+
+The getters are rather expensive and the  checks would either duplicate a lot of the logic or just have to reuse the getters. I could have the  methods store the result of the  in a field and make the getter lazy, but it would be nice for  not to have any side effects. I could write this with nested try{} catch{} blocks, but that doesn't look elegant. seems like there should be a better solution to this...
+EDIT: changed  to  to make it clear that they're expensive.
+",8295278,"This is not an ""is it OK to do multiple returns"" problem - your multiple returns are fine.
+This is a refactoring and/or state storage problem.
+If you have:
+
+and
+
+then the complexity of the problem depends on whether the  calculation produces lots of intermediate values that are necessary for .
+You likely need something like:
+
+",0,7,16,2.29,1,2,1,0
+6782,14894807,Moving from `prototype` and `new` to a closure-and-exposure pattern,"I have been re-factoring someone else's JavaScript code.
+BEFORE:
+
+AFTER:
+
+For me the first example looks difficult to read, especially in a larger context. Adding methods like  on like this, using the  property, seems much less controlled as it can presumably happen anywhere in the script. My refactored code (the second example above) looks much neater to me and is therefore easier to read because it's self-contained. I've gained some privacy with the variable declarations but I've lost the possibilities the prototype chain.
+...
+QUESTIONS:
+
+Firstly, I'm interested to know what else I have lost by foregoing , or if there are larger implications to the loss of the prototype chain. This article is 6 years old but claims that using the  property is much more efficient on a large scale than closure patterns.
+Both the examples above would still be instantiated by a  operator; they are both 'classical'-ish constructors. Eventually I'd even like to move away from this into a model where all the properties and functions are declared as s and I have one method which I expose that's capable of returning an object opening up all the properties and methods I need, which have privileges (by virtue of closure) to those that are private. Something like this:
+
+There are a few answers on StackOverflow addressing the 'prototype vs. closure' question (here and here, for example). But, as with the  property, I'm interested in what a move towards this and away from the  operator means for the efficiency of my code and for any loss of possibility (e.g.  is lost). If I'm not going to be using prototypal inheritance anyway, do I actually lose anything in foregoing the  operator?
+A looser question if I'm permitted, given that I'm asking for specifics above: if  and  really are the most efficient way to go, with more advantages (whatever you think they might be) than closure, are there any guidelines or design patterns for writing them in a neater fashion?
+
+...
+UPDATE:
+Note that  returns a new object each time, so this is where the instantiation happens. As I understand this, where that object refers to methods declared in the  closure, they are the same methods across all objects (unless overwritten). In the case of the  variable (which I've now corrected), this can be inherited from the argument of , have a default value, or again refer back to a encapsulated pre-existing method or property. So there are instances of objects being produced and there is some inheritance (plus polymorphism?) going on here.
+So to repeat question 2: If I'm not going to be using prototypal inheritance anyway, do I actually lose anything in foregoing the  operator?
+Many thanks for answers so far, which have helped to clarify my question.
+",14895111,"In my experience, the only thing you lose by not using  is memory - each object ends up owning its own copy of the function objects defined therein.
+If you only intend instantiating ""small"" numbers of objects this is not likely to be a big problem.
+Regarding your specific questions:
+
+The second comment on that linked article is highly relevant.  The author's benchmark is wrong - it's testing the overhead of running a constructor that also declares four inner functions.  It's not testing the subsequent performance of those functions.
+Your ""closure and expose"" code sample is not OO, it's just a namespace with some enclosed private variables.  Since it doesn't use  it's no use if you ever hope to instantiate objects from it.
+I can't answer this - ""it depends"" is as good an answer as you can get for this.
+
+",1,7,16,2.29,1,2,1,0
+6782,29015019,preventing late ajax response from updating div,"Assume the following structure for a primitive single page app:
+
+clicking on the first link quickly sets some static content:
+
+clicking on the second link fetches some content from a server and when this is done, uses it to set the content on the page:
+
+Clicking on the  link and then quickly (before ajax returns) to the  link is problematic because when the ajax returns it'll replace the content even though the user has ""switched"" to the static page, so I get an inconsistent app state with title from one page and content from another:
+
+What is the best way to sort this out?
+I've thought of:
+
+using a global (or an application scoped) variable where I'll be tracking which page is currently visible, so when ajax responses return I should be checking that variable before writing content on screen.
+have an ajax queue or something and call abort on all possible pending ajax responses whenever I'm switching pages.
+not sharing the same  for all pages. Each page get's its own content and switching pages also involves showing/hiding divs.
+
+Is there a better way?
+",29015256,"If you use  instead of  then the element  is resolved at call time rather than at completion time, so if the original  is replaced with a new element it'll be the old one that receives the content rather than the one that currently holds that ID in the DOM.
+
+Alternatively you can get the same effect using  just by retrieving a reference to  before calling  and using that reference inside the callback.
+",1,7,16,2.29,1,2,1,0
