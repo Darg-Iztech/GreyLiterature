@@ -36,13 +36,9 @@ def load_model(checkpoint):
         config = AutoConfig.from_pretrained("distilbert-base-uncased", num_labels=checkpoint['num_labels'])
         model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", config=config)
 
-    if checkpoint['device'] == 'cuda':
-        if torch.cuda.is_available():
-            logger.warning('Running on GPU.')
-            model.cuda()
-        else:
-            logger.error("Checkpoint device ('cuda') is not available!")
-            sys.exit()
+    if torch.cuda.is_available():
+        logger.warning('Running on GPU.')
+        model.cuda()
     else:
         logger.warning('Running on CPU.')
         model.cpu()
@@ -73,10 +69,12 @@ def tokenize_helper(questions, answers, tokenizer, seq, max_len):
 
 
 def tokenize(df, checkpoint):
+    titles = df.title.values
     questions = df.question.values
     answers = df.answer.values
     labels = df.label.values
 
+    logger.warning("TITLES:\n {}".format(titles))
     logger.warning("QUESTIONS:\n {}".format(questions))
     logger.warning("ANSWERS:\n {}".format(answers))
     logger.warning("LABELS:\n {}".format(labels))
@@ -89,6 +87,7 @@ def tokenize(df, checkpoint):
         tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
 
     logger.warning("Tokenizing input...")
+    questions = titles + " " + questions
     ids, att_mask = tokenize_helper(questions, answers, tokenizer, checkpoint['sequence'], checkpoint['max_len'])
     logger.warning("Converting tokenized input to torch tensor...")
     ids = torch.cat(ids,dim=0)
@@ -120,10 +119,11 @@ def test(test_iter, model, device):
 
 
 def get_df_inputs():
+    title = input('Enter title (as plain text): ')
     question = input('Enter question (as plain text): ')
     answer = input('Enter answer (as plain text): ')
-    label = int(input('Enter label (as 0 or 1): '))
-    data_dict = {'question': [question], 'answer': [answer], 'label': [label]}
+    label = int(input('Enter expected label (as 0 or 1): '))
+    data_dict = {'title': [title], 'question': [question], 'answer': [answer], 'label': [label]}
     data_frame = pd.DataFrame(data=data_dict)
     return data_frame
 
@@ -134,7 +134,7 @@ def main():
 
     args = parser.parse_args()
 
-    checkpoint = torch.load(args.checkpoint_path)
+    checkpoint = torch.load(args.checkpoint_path, map_location=('cuda' if torch.cuda.is_available() else 'cpu'))
 
     logger.warning(("LOADED CHECKPOINT FROM {} \n{{"
                   "\n  epoch: {}\n  dev_score: {:.4f}\n  test_score: {:.4f}\n  seed: {}\n  lr: {}"
@@ -159,7 +159,7 @@ def main():
     test_iter = DataLoader(test_dataset, sampler=SequentialSampler(test_dataset), batch_size=1)
 
     model, _ = load_model(checkpoint)
-    test_label, test_pred = test(test_iter, model, checkpoint['device'])
+    test_label, test_pred = test(test_iter, model, device=('cuda' if torch.cuda.is_available() else 'cpu'))
 
     pred_class = np.concatenate([np.argmax(numarray, axis=1) for numarray in test_pred]).ravel()
     label_class = np.concatenate([numarray for numarray in test_label]).ravel()

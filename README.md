@@ -44,13 +44,13 @@ python3 main.py --model='distilbert' --data_dir='data/dp' --labels='median_class
 
 ## Testing with a Pre-trained Model
 
-**Step 1)** Download the pre-trained model with 71.6% accuracy from [HERE]() (~1.3 Gb ``pth.tar`` file).
+**Step 1)** Download the pre-trained model with 72% accuracy from [HERE](https://bit.ly/36KMdYh) (~1.2 Gb ``pth.tar`` file).
 
 **Step 2)** Use ``predict.py`` module to predict the reputability of specific author(s).
 
 The ``predict.py`` module takes 2 arguments:
 * ``--checkpoint_path`` (required) :arrow_right: Path to ``pth.tar`` file downloaded in Step 1.
-* ``--test_path`` (optional) :arrow_right: Path to the CSV file including questions and answers of which author reputability will be predicted. The file must include ``question,answer,label`` columns. If the ``--test_path`` is not set, the question, answer, and label are taken as console input.
+* ``--test_path`` (optional) :arrow_right: Path to the CSV file including questions and answers of which author reputability will be predicted. The file must include ``title,question,answer,label`` columns. If the ``--test_path`` is not set, the question, answer, and label are taken as console input.
 
 To see a sample ``test.csv`` file :arrow_right: [data/test/test.csv](https://github.com/Darg-Iztech/GreyLiterature/blob/master/data/test/test.csv)
 
@@ -60,17 +60,18 @@ To see a sample ``test.csv`` file :arrow_right: [data/test/test.csv](https://git
 ```bash
 python3 predict.py --checkpoint_path='models/checkpoint.pth.tar' --test_path='data/test/test.csv'
 ------------------
-Expected:  [0 1 0]
-Predicted: [1 1 0]
+Expected:  [1 1 0 0]
+Predicted: [1 1 0 0]
 ```
 
 **Example 2)** ``--test_path`` is not set:
-```bash
+```
 python3 predict.py --checkpoint_path='models/checkpoint.pth.tar'
 ------------------
-Enter question (as plain text): Which kind of Singleton is this?
-Enter answer (as plain text): It is not a singleton. It is multiton pattern.
-Enter label (as 0 or 1): 1
+Enter title (as plain text): What are UI Patterns?
+Enter question (as plain text): What is the difference between User Interaction Design Patterns and User Interface Design Patterns?
+Enter answer (as plain text): I've heard them used interchangeably, but people might be defining one to be the design patterns used to implement a user interface (for example, using the Command pattern to implement undo and redo operations supported by buttons on the UI and/or keyboard shortcuts) and the other to be patterns that appear in the user interface, such as the Wizard pattern and then defining characteristics about that pattern (name, intent, applicability, known uses, and more).
+Enter expected label (as 0 or 1): 1
 ------------------
 Expected:  [1]
 Predicted: [1]
